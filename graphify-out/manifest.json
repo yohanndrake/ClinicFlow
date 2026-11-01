@@ -700,5 +700,11 @@
     "seen": 1793510764.7998848,
     "ast_hash": "6b8f8fe162e871200ddce96bdc79c766",
     "semantic_hash": "6b8f8fe162e871200ddce96bdc79c766"
+  },
+  "package-lock.json": {
+    "mtime": 1793420979.4874108,
+    "seen": 1793511637.5149655,
+    "ast_hash": "26f84d1c59bc9042dab94e1563f1d803",
+    "semantic_hash": ""
   }
 }
