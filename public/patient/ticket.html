@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Ticket - ClinicFlow</title>
+  <link rel="stylesheet" href="/patient/ticket.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/patient/ticket.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+    <nav class="top-nav" aria-label="Patient pages">
+      <a href="/patient/home.html">Home</a>
+      <a href="/patient/take-number.html">Take a Number</a>
+      <a href="/patient/ticket.html" aria-current="page">My Ticket</a>
+      <a href="/patient/history.html">History</a>
+    </nav>
+
+    <div class="header-tools">
+      <a href="/patient/notifications.html" class="bell" id="bell" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.3A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21z" fill="currentColor"/>
+        </svg>
+        <span class="bell-count" id="bellCount" hidden></span>
+      </a>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-name" id="headerName"></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-title">
+      <h1>My Ticket</h1>
+      <p class="now" id="updated" aria-live="off">Loading...</p>
+    </div>
+
+    <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+    <!-- "It's your turn" banner (called state only) -->
+    <div class="called-banner" id="calledBanner" role="status" hidden>
+      <p class="called-title" id="calledTitle"></p>
+      <p id="calledSub"></p>
+    </div>
+
+    <!-- Message after "I'm here" or cancel -->
+    <div class="alert alert-ok" id="pageNotice" role="status" hidden></div>
+
+    <!-- Active ticket -->
+    <div class="layout" id="activeArea" hidden>
+      <section class="cf-card cf-card-raised ticket-card" aria-labelledby="numberLabel">
+        <div class="ticket-top">
+          <p class="muted" id="numberLabel">Your queue number</p>
+          <span class="cf-badge" id="ticketBadge"></span>
+        </div>
+        <p class="ticket-number" id="ticketNumber"></p>
+        <p class="ticket-service" id="ticketService"></p>
+        <p class="muted" id="ticketRoom"></p>
+
+        <!-- Waiting / Near / Called / Done -->
+        <ol class="steps" aria-label="Ticket progress">
+          <li data-step="0">Waiting</li>
+          <li data-step="1">Near</li>
+          <li data-step="2">Called</li>
+          <li data-step="3">Done</li>
+        </ol>
+
+        <div class="position-box" id="positionBox">
+          <p class="position-main" id="positionMain"></p>
+          <p id="positionAhead"></p>
+          <p class="muted" id="positionWait"></p>
+        </div>
+
+        <dl class="facts" id="calledFacts" hidden>
+          <div class="fact"><dt>Arrival window</dt><dd id="arriveBy"></dd></div>
+          <div class="fact"><dt>Destination</dt><dd id="destination"></dd></div>
+        </dl>
+
+        <div class="actions">
+          <button type="button" class="cf-btn cf-btn-secondary" id="hereButton">I'm here</button>
+          <button type="button" class="cf-btn cf-btn-danger" id="cancelButton">Cancel ticket</button>
+        </div>
+      </section>
+
+      <div class="side">
+        <section class="cf-card" aria-labelledby="queueHeading">
+          <div class="card-head">
+            <h2 class="card-title" id="queueHeading">Clinic queue</h2>
+            <span class="cf-badge" id="queueBadge"></span>
+          </div>
+          <p class="now-serving" id="nowServing"></p>
+          <p class="muted" id="queueMeta"></p>
+        </section>
+
+        <section class="cf-card" aria-labelledby="alertsHeading">
+          <h2 class="card-title" id="alertsHeading">Keep this page open</h2>
+          <p class="muted" id="alertsText">Watch your ticket status here. Turn on alerts to get a message on this device when your turn is near.</p>
+          <button type="button" class="cf-btn cf-btn-secondary cf-btn-block" id="alertsButton">Enable alerts</button>
+        </section>
+      </div>
+    </div>
+
+    <!-- Finished ticket (completed / skipped / cancelled / expired) -->
+    <section class="cf-card cf-card-raised end-card" id="endCard" hidden>
+      <div class="card-head">
+        <h2 class="card-title" id="endTitle"></h2>
+        <span class="cf-badge" id="endBadge"></span>
+      </div>
+      <p class="end-ticket" id="endTicket"></p>
+      <dl class="end-rows" id="endRows"></dl>
+      <p id="endMessage"></p>
+      <a href="/patient/take-number.html" class="cf-btn cf-btn-primary" id="endAction">Take a new number</a>
+    </section>
+
+    <!-- No ticket at all today -->
+    <section class="cf-card cf-card-raised end-card" id="noneCard" hidden>
+      <h2 class="card-title">No active ticket</h2>
+      <p>You do not have an active queue number. Take a number to join the queue.</p>
+      <a href="/patient/take-number.html" class="cf-btn cf-btn-primary">Take a Number</a>
+    </section>
+
+    <p class="muted" id="loading">Loading your ticket...</p>
+  </main>
+
+  <!-- Are you sure? -->
+  <dialog id="cancelDialog" aria-labelledby="cancelTitle">
+    <form method="dialog" class="dialog-body">
+      <h2 id="cancelTitle">Cancel this ticket?</h2>
+      <p class="muted">You will lose your place in the queue. You can take a new number afterwards, but it goes to the back of the line.</p>
+      <div class="dialog-actions">
+        <button type="submit" value="keep" class="cf-btn cf-btn-secondary">Keep my ticket</button>
+        <button type="submit" value="cancel" class="cf-btn cf-btn-danger" id="confirmCancel">Yes, cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <nav class="tab-bar" aria-label="Patient pages">
+    <a href="/patient/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+    <a href="/patient/take-number.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
+    <a href="/patient/ticket.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>
+    <a href="/patient/history.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+  </nav>
+
+</body>
+</html>

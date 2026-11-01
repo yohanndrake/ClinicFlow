@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Profile - ClinicFlow</title>
+  <link rel="stylesheet" href="/profile/profile.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/profile/profile.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <!-- Phones show the back arrow, desktop shows the clinic name -->
+    <a class="back-button" id="backButton" href="/" aria-label="Back to my page">&larr;</a>
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+    <div class="header-tools">
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar avatar-small" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-name" id="headerName"></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html" aria-current="page">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="who">
+      <span class="avatar" id="avatarInitials" aria-hidden="true"></span>
+      <div>
+        <p class="who-name" id="whoName">Loading...</p>
+        <p class="who-role" id="whoRole"></p>
+      </div>
+    </div>
+
+    <section class="cf-card cf-card-raised form-card">
+      <h1>Edit Profile</h1>
+
+      <!-- Shows problems that are not about one field (connection lost, server error) -->
+      <div class="alert alert-error" id="formAlert" role="alert" hidden></div>
+
+      <form id="profileForm" novalidate>
+        <div class="field">
+          <label class="cf-label" for="fullName">Full name</label>
+          <input class="cf-input" type="text" id="fullName" autocomplete="name" maxlength="100" required disabled>
+          <p class="cf-error" id="fullNameError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="contact">Contact number</label>
+          <input class="cf-input" type="tel" id="contact" autocomplete="tel" inputmode="tel" maxlength="20" disabled>
+          <p class="cf-error" id="contactError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="email">Email (read-only)</label>
+          <input class="cf-input" type="email" id="email" readonly>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="role">Role (read-only)</label>
+          <input class="cf-input" type="text" id="role" readonly>
+        </div>
+
+        <button type="submit" class="cf-btn cf-btn-primary cf-btn-block" id="saveButton" disabled>Save</button>
+      </form>
+    </section>
+
+    <!-- Appears after a successful save -->
+    <div class="toast" id="toast" role="status" hidden>Profile updated successfully.</div>
+  </main>
+
+</body>
+</html>

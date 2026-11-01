@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home - ClinicFlow</title>
+  <link rel="stylesheet" href="/patient/home.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/patient/home.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+    <!-- Desktop: links in the top bar. Phones use the tab bar at the bottom instead. -->
+    <nav class="top-nav" aria-label="Patient pages">
+      <a href="/patient/home.html" aria-current="page">Home</a>
+      <a href="/patient/take-number.html">Take a Number</a>
+      <a href="/patient/ticket.html">My Ticket</a>
+      <a href="/patient/history.html">History</a>
+    </nav>
+
+    <div class="header-tools">
+      <a href="/patient/notifications.html" class="bell" id="bell" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.3A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21z" fill="currentColor"/>
+        </svg>
+        <span class="bell-count" id="bellCount" hidden></span>
+      </a>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-name" id="headerName"></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="greeting">
+      <h1 id="greeting">Hi.</h1>
+      <p class="now" id="now"></p>
+    </div>
+
+    <!-- Connection problem notice -->
+    <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+    <!-- Active ticket, or "take a number" when there is none -->
+    <section class="cf-card cf-card-raised ticket-card" aria-labelledby="ticketHeading" id="ticketSection">
+      <h2 class="card-title" id="ticketHeading">Your active ticket</h2>
+
+      <div class="ticket-has" id="ticketHas" hidden>
+        <span class="cf-badge" id="ticketBadge"></span>
+        <p class="ticket-number" id="ticketNumber"></p>
+        <div class="ticket-details">
+          <div>
+            <p class="ticket-service" id="ticketService"></p>
+            <p class="muted" id="ticketRoom"></p>
+          </div>
+          <div>
+            <p class="ticket-strong" id="ticketPosition"></p>
+            <p class="muted" id="ticketAhead"></p>
+          </div>
+          <div>
+            <p class="muted small-label">Estimated wait</p>
+            <p class="ticket-strong" id="ticketWait"></p>
+          </div>
+        </div>
+        <a href="/patient/ticket.html" class="cf-btn cf-btn-secondary ticket-action">View ticket</a>
+      </div>
+
+      <div class="ticket-none" id="ticketNone" hidden>
+        <p>You don't have an active ticket.</p>
+        <a href="/patient/take-number.html" class="cf-btn cf-btn-primary">Take a queue number</a>
+      </div>
+
+      <p class="muted" id="ticketLoading">Loading your ticket...</p>
+    </section>
+
+    <!-- One card per service: now serving, queue length, hours -->
+    <div class="services" id="services"></div>
+
+    <div class="two-columns">
+      <section class="cf-card" aria-labelledby="alertsHeading">
+        <div class="card-head">
+          <h2 class="card-title" id="alertsHeading">Latest notifications</h2>
+          <a href="/patient/notifications.html">View all</a>
+        </div>
+        <ul class="alert-list" id="alertList"></ul>
+        <p class="muted" id="alertsEmpty" hidden>No notifications yet.</p>
+      </section>
+
+      <section class="cf-card" aria-labelledby="visitsHeading">
+        <div class="card-head">
+          <h2 class="card-title" id="visitsHeading">Recent visits</h2>
+          <a href="/patient/history.html">View all</a>
+        </div>
+        <table class="visits" id="visitsTable" hidden>
+          <thead>
+            <tr><th scope="col">Date</th><th scope="col">Ticket</th><th scope="col">Status</th><th scope="col">Wait time</th></tr>
+          </thead>
+          <tbody id="visitRows"></tbody>
+        </table>
+        <p class="muted" id="visitsEmpty" hidden>No visits yet.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- Phones: tab bar fixed to the bottom of the screen -->
+  <nav class="tab-bar" aria-label="Patient pages">
+    <a href="/patient/home.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+    <a href="/patient/take-number.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
+    <a href="/patient/ticket.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>
+    <a href="/patient/history.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+  </nav>
+
+</body>
+</html>

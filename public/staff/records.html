@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queue Records - ClinicFlow</title>
+  <link rel="stylesheet" href="/staff/records.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/staff/records.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Staff console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Staff</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side-nav" aria-label="Staff pages">
+      <a href="/staff/console.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
+      <a href="/staff/records.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Queue Records</h1>
+      <p class="muted" id="servicesLine"></p>
+
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+      <form class="cf-card filters" id="filters" aria-label="Filter records">
+        <div class="filter">
+          <label class="cf-label" for="range">Date range</label>
+          <select class="cf-input" id="range">
+            <option value="0">Today</option>
+            <option value="6" selected>Last 7 days</option>
+            <option value="29">Last 30 days</option>
+            <option value="89">Last 90 days</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label class="cf-label" for="status">Status</label>
+          <select class="cf-input" id="status">
+            <option value="">All statuses</option>
+            <option value="waiting">Waiting</option>
+            <option value="serving">Serving</option>
+            <option value="completed">Completed</option>
+            <option value="skipped">Skipped</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="filter" id="serviceFilter" hidden>
+          <label class="cf-label" for="service">Service</label>
+          <select class="cf-input" id="service"><option value="">All my services</option></select>
+        </div>
+        <div class="filter filter-wide">
+          <label class="cf-label" for="search">Search</label>
+          <input class="cf-input" type="search" id="search" placeholder="Name or number" autocomplete="off">
+        </div>
+      </form>
+
+      <section class="results" aria-label="Records" aria-live="polite">
+        <p class="muted" id="loading">Loading records...</p>
+
+        <table class="records" id="recordsTable" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Number</th><th scope="col">Date</th><th scope="col">Name</th>
+              <th scope="col">Status</th><th scope="col">Wait time</th><th scope="col">Service time</th>
+            </tr>
+          </thead>
+          <tbody id="recordRows"></tbody>
+        </table>
+
+        <button type="button" class="cf-btn cf-btn-secondary load-more" id="loadMore" hidden>Load more</button>
+
+        <div class="pager" id="pager" hidden>
+          <button type="button" class="cf-btn cf-btn-secondary" id="prevButton">Previous</button>
+          <span class="muted" id="pageInfo"></span>
+          <button type="button" class="cf-btn cf-btn-secondary" id="nextButton">Next</button>
+        </div>
+
+        <div class="cf-card empty" id="empty" hidden>
+          <h2>No records found</h2>
+          <p class="muted">Try a wider date range or a different status.</p>
+        </div>
+      </section>
+
+      <p class="hint">Tickets that were deleted are not shown here. Use the Queue Console to restore today's deleted tickets.</p>
+    </main>
+  </div>
+
+  <!-- Ticket details: a drawer from the right on desktop, a bottom sheet on phones -->
+  <dialog id="detailsDialog" class="drawer" aria-labelledby="detailsTitle">
+    <div class="dialog-body">
+      <div class="dialog-head"><h2 id="detailsTitle">Ticket Details</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="details-who"><strong id="detailsNumber"></strong> <span id="detailsName"></span></p>
+      <p class="muted" id="detailsService"></p>
+      <p class="muted" id="detailsLoading">Loading...</p>
+      <div id="detailsBody"></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Close</button>
+      </div>
+    </div>
+  </dialog>
+
+</body>
+</html>

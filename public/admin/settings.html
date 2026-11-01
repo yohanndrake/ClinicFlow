@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinic Settings - ClinicFlow</title>
+  <link rel="stylesheet" href="/admin/settings.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/admin/settings.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Admin console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Administrator</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side-nav" aria-label="Admin pages">
+      <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
+      <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
+      <a href="/admin/services.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Services</span></a>
+      <a href="/admin/users.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Users</span></a>
+      <a href="/admin/records.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+      <a href="/admin/settings.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Settings</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Clinic Settings</h1>
+
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+      <p class="muted" id="loading">Loading settings...</p>
+
+      <form class="cf-card settings-form" id="settingsForm" novalidate hidden>
+        <div class="field">
+          <label class="cf-label" for="sName">Clinic name</label>
+          <input class="cf-input" id="sName" maxlength="100" autocomplete="off">
+          <p class="cf-error" id="sNameError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="sZone">Time zone</label>
+          <input class="cf-input" id="sZone" list="zoneList" autocomplete="off" aria-describedby="sZoneHint sZoneError">
+          <datalist id="zoneList"></datalist>
+          <p class="hint" id="sZoneHint">For example Asia/Manila. Queue days and opening hours follow this time zone.</p>
+          <p class="cf-error" id="sZoneError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="sNear">&ldquo;Near&rdquo; threshold (people ahead)</label>
+          <input class="cf-input" id="sNear" type="number" min="1" step="1" inputmode="numeric" aria-describedby="sNearHint sNearError">
+          <p class="hint" id="sNearHint">Patients get a &ldquo;your turn is near&rdquo; notification when this many people or fewer are ahead.</p>
+          <p class="cf-error" id="sNearError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="sGrace">Grace period (minutes)</label>
+          <input class="cf-input" id="sGrace" type="number" min="0" step="1" inputmode="numeric" aria-describedby="sGraceHint sGraceError">
+          <p class="hint" id="sGraceHint">How long a called patient has to arrive before the ticket can be skipped.</p>
+          <p class="cf-error" id="sGraceError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="sTravel">Default travel time (minutes)</label>
+          <input class="cf-input" id="sTravel" type="number" min="0" step="1" inputmode="numeric" aria-describedby="sTravelHint sTravelError">
+          <p class="hint" id="sTravelHint">Suggested travel time when a patient takes a number. Default: 15 min.</p>
+          <p class="cf-error" id="sTravelError" hidden></p>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="cf-btn cf-btn-secondary" id="resetButton">Reset to defaults</button>
+          <button type="submit" class="cf-btn cf-btn-primary" id="saveButton">Save</button>
+        </div>
+      </form>
+
+      <p class="hint">Save applies your edits. Reset to defaults fills in the standard values (3 people, 10 min, 15 min) so you can review them, then press Save to keep them.</p>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+</body>
+</html>

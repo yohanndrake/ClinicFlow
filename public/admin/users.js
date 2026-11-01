@@ -1,0 +1,525 @@
+/* ---------- Light / dark theme ---------- */
+// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
+
+function savedTheme() {
+  try {
+    return localStorage.getItem('cf-theme');
+  } catch (err) {
+    return null; // storage can be blocked in private mode
+  }
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try {
+    localStorage.setItem('cf-theme', theme);
+  } catch (err) {
+    // not saving is fine, the theme still changes for this visit
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
+  });
+}
+
+// First visit: follow the device setting.
+var startTheme = savedTheme() ||
+  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+document.documentElement.setAttribute('data-theme', startTheme);
+
+
+/* ---------- Everything else waits until the page is ready ---------- */
+
+document.addEventListener('DOMContentLoaded', function () {
+  var userButton = document.getElementById('userButton');
+  var userMenu = document.getElementById('userMenu');
+  var searchInput = document.getElementById('search');
+  var statusSelect = document.getElementById('status');
+
+  var timeZone = undefined;   // the clinic's time zone, known after the board answers
+  var role = 'staff';         // the open tab: staff, patient or admin
+  var users = [];             // the latest list
+  var me = null;              // the logged-in admin
+  var target = null;          // the user a dialog is working on (null when adding)
+  var toastTimer = null;
+  var searchTimer = null;
+  var requestNumber = 0;      // ignore old answers when the tab or filters changed meanwhile
+
+  var ROLE_WORDS = { staff: 'Staff', patient: 'Patient', admin: 'Admin' };
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  /* Theme buttons */
+  setTheme(startTheme);
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTheme(button.dataset.themeSet);
+    });
+  });
+
+  /* ---------- Small helpers ---------- */
+
+  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function capitalize(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  // "Clinic Admin" -> "CA"
+  function initials(name) {
+    var words = String(name).trim().split(/\s+/);
+    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
+    return letters.toUpperCase();
+  }
+
+  function dayText(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: timeZone });
+  }
+
+  // "2026-10-23" -> "Oct 23, 2026"  (already a clinic day, so no time zone maths)
+  function formatDay(isoDate) {
+    if (!isoDate) return '—';
+    var parts = String(isoDate).split('-');
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[Number(parts[1]) - 1] + ' ' + Number(parts[2]) + ', ' + parts[0];
+  }
+
+  function updateClock() {
+    byId('clock').textContent = new Date().toLocaleString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: timeZone
+    });
+  }
+
+  function toast(message, isError) {
+    var box = byId('toast');
+    box.textContent = message;
+    box.className = 'toast' + (isError ? ' is-error' : '');
+    box.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { box.hidden = true; }, 4500);
+  }
+
+  /* ---------- User menu ---------- */
+
+  function closeMenu() {
+    userMenu.hidden = true;
+    userButton.setAttribute('aria-expanded', 'false');
+  }
+
+  userButton.addEventListener('click', function (event) {
+    event.stopPropagation();
+    var open = userMenu.hidden;
+    userMenu.hidden = !open;
+    userButton.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', function (event) {
+    if (!userMenu.contains(event.target)) closeMenu();
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeMenu();
+  });
+
+  byId('logoutButton').addEventListener('click', function () {
+    fetch('/api/auth/logout', { method: 'POST' })
+      .catch(function () { /* leave the page either way */ })
+      .then(function () { window.location.href = '/login/login.html'; });
+  });
+
+  /* ---------- Talking to the server ---------- */
+
+  // Sends a request and resolves to { status, data }. A logged-out person goes to the login page.
+  function send(method, url, body) {
+    var options = { method: method, cache: 'no-store' };
+    if (body !== undefined) {
+      options.headers = { 'Content-Type': 'application/json' };
+      options.body = JSON.stringify(body);
+    }
+    return fetch(url, options).then(function (res) {
+      if (res.status === 401) {
+        window.location.replace('/login/login.html');
+        throw new Error('not logged in');
+      }
+      if (res.status === 403) {
+        window.location.replace('/error/error.html?code=403');
+        throw new Error('not allowed');
+      }
+      return res.json().catch(function () { return {}; }).then(function (json) {
+        return { status: res.status, data: json };
+      });
+    });
+  }
+
+  /* ---------- Dialog helpers ---------- */
+
+  function openDialog(id) {
+    var dialog = byId(id);
+    dialog.querySelectorAll('.alert, .cf-error').forEach(function (node) { node.hidden = true; });
+    dialog.querySelectorAll('.is-error').forEach(function (node) { node.classList.remove('is-error'); });
+    dialog.showModal();
+  }
+
+  document.querySelectorAll('[data-close]').forEach(function (button) {
+    button.addEventListener('click', function () { button.closest('dialog').close(); });
+  });
+
+  function showAlert(id, message) {
+    byId(id).textContent = message;
+    byId(id).hidden = false;
+  }
+
+  function fieldError(inputId, message) {
+    var input = byId(inputId);
+    input.classList.add('is-error');
+    byId(inputId + 'Error').textContent = message;
+    byId(inputId + 'Error').hidden = false;
+    return input;
+  }
+
+  /* ---------- The list ---------- */
+
+  function addButton(box, label, className, onClick, disabled) {
+    var button = el('button', 'link-button' + (className ? ' ' + className : ''), label);
+    button.type = 'button';
+    button.disabled = !!disabled;
+    button.addEventListener('click', onClick);
+    box.appendChild(button);
+  }
+
+  // The "assigned service" cell for staff, "visits" for patients
+  function detailText(u) {
+    if (role === 'staff') {
+      if (!u.assignments.length) return 'Not assigned';
+      return u.assignments.map(function (a) { return a.service_name + (a.counter_label ? ' · ' + a.counter_label : ''); }).join(', ');
+    }
+    if (role === 'patient') {
+      return u.visits + (u.visits === 1 ? ' visit' : ' visits') + (u.last_visit ? ' · last ' + formatDay(u.last_visit) : '');
+    }
+    return '—';
+  }
+
+  function drawRow(u) {
+    var inactive = u.status === 'inactive';
+    var row = el('tr', inactive ? 'is-inactive' : '');
+
+    function cell(label, text, className) {
+      var td = el('td', className || '', text);
+      td.dataset.label = label;
+      row.appendChild(td);
+      return td;
+    }
+
+    cell('Name', u.full_name, 'name-col');
+    cell('Email', u.email);
+    cell('Contact', u.contact_number || '—');
+    var status = cell('Status', '');
+    status.appendChild(el('span', 'cf-badge ' + (inactive ? 'cf-inactive' : 'cf-active'), capitalize(u.status)));
+    cell(role === 'patient' ? 'Visits' : 'Assigned service', detailText(u));
+    cell('Created', dayText(u.created_at));
+
+    var actionsCell = el('td', 'actions-col');
+    var actions = el('div', 'row-actions');
+    if (role === 'patient') addButton(actions, 'Details', '', function () { openPatient(u); });
+    else addButton(actions, 'Edit', '', function () { openForm(u); });
+
+    // Admins cannot switch off their own account
+    var isSelf = role === 'admin' && me && u.id === me.id;
+    if (inactive) addButton(actions, 'Activate', 'solid', function () { setStatus(u, 'active'); });
+    else addButton(actions, 'Deactivate', 'danger', function () { openConfirm(u); }, isSelf);
+    addButton(actions, 'Reset Password', '', function () { openReset(u); });
+    actionsCell.appendChild(actions);
+    row.appendChild(actionsCell);
+    return row;
+  }
+
+  function drawList() {
+    var rows = byId('rows');
+    rows.textContent = '';
+    users.forEach(function (u) { rows.appendChild(drawRow(u)); });
+    byId('table').hidden = users.length === 0;
+    byId('empty').hidden = users.length > 0;
+    byId('detailHeading').textContent = role === 'patient' ? 'Visits' : 'Assigned service';
+  }
+
+  function load() {
+    var mine = ++requestNumber;
+    var query = ['role=' + role];
+    if (searchInput.value.trim()) query.push('q=' + encodeURIComponent(searchInput.value.trim()));
+    if (statusSelect.value) query.push('status=' + statusSelect.value);
+
+    return send('GET', '/api/admin/users?' + query.join('&'))
+      .then(function (result) {
+        if (mine !== requestNumber) return;
+        if (result.status !== 200) throw new Error(result.data.error || 'bad status');
+        users = result.data.users;
+        byId('loading').hidden = true;
+        byId('pageAlert').hidden = true;
+        drawList();
+      })
+      .catch(function (err) {
+        if (err.message === 'not logged in' || err.message === 'not allowed' || mine !== requestNumber) return;
+        byId('loading').hidden = true;
+        showAlert('pageAlert', "Can't load users. Check your connection and try again.");
+      });
+  }
+
+  // Tabs: Staff / Patients / Admins
+  document.querySelectorAll('[data-role]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      role = button.dataset.role;
+      document.querySelectorAll('[data-role]').forEach(function (other) {
+        other.setAttribute('aria-pressed', String(other === button));
+      });
+      // Patients register themselves, so there is no "Add" button for them
+      byId('addUser').hidden = role === 'patient';
+      byId('addUser').textContent = 'Add ' + ROLE_WORDS[role];
+      load();
+    });
+  });
+
+  statusSelect.addEventListener('change', load);
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(load, 300);
+  });
+  byId('toolbar').addEventListener('submit', function (event) { event.preventDefault(); });
+
+  /* ---------- Add / edit (staff and admins) ---------- */
+
+  function openForm(user) {
+    target = user || null;
+    byId('userTitle').textContent = (user ? 'Edit ' : 'Add ') + ROLE_WORDS[role];
+    byId('uName').value = user ? user.full_name : '';
+    byId('uEmail').value = user ? user.email : '';
+    byId('uContact').value = user && user.contact_number ? user.contact_number : '';
+    byId('uPassword').value = '';
+    byId('uStatus').value = user ? user.status : 'active';
+    byId('uService').value = '';
+    byId('uCounter').value = '';
+
+    // A temporary password is only for new accounts (use Reset Password later), status only for existing ones
+    byId('passwordField').hidden = !!user;
+    byId('statusField').hidden = !user;
+    byId('staffFields').hidden = role !== 'staff';
+    openDialog('userDialog');
+    byId('uName').focus();
+  }
+
+  byId('addUser').addEventListener('click', function () { openForm(null); });
+
+  byId('userForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    byId('userDialog').querySelectorAll('.alert, .cf-error').forEach(function (node) { node.hidden = true; });
+    byId('userDialog').querySelectorAll('.is-error').forEach(function (node) { node.classList.remove('is-error'); });
+
+    var name = byId('uName').value.trim();
+    var email = byId('uEmail').value.trim();
+    var contact = byId('uContact').value.trim();
+    var password = byId('uPassword').value;
+    var firstBad = null;
+
+    function bad(id, message) {
+      var input = fieldError(id, message);
+      if (!firstBad) firstBad = input;
+    }
+
+    // The same rules the server checks, so people see the problem before sending
+    if (!name) bad('uName', 'Name is required.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad('uEmail', 'Enter a valid email address.');
+    if (contact && !/^[0-9\s+()-]+$/.test(contact)) bad('uContact', 'Use digits, spaces, + - ( ) only.');
+    if (!target && password && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {
+      bad('uPassword', 'Use at least 8 characters with a letter and a number.');
+    }
+    if (firstBad) {
+      firstBad.focus();
+      return;
+    }
+
+    var body = { full_name: name, email: email, contact_number: contact };
+    if (role === 'staff' && byId('uService').value) {
+      body.service_id = Number(byId('uService').value);
+      body.counter_label = byId('uCounter').value.trim();
+    }
+
+    var request;
+    if (target) {
+      body.status = byId('uStatus').value;
+      request = send('PATCH', '/api/admin/users/' + role + '/' + target.id, body);
+    } else {
+      body.role = role;
+      if (password) body.password = password;
+      request = send('POST', '/api/admin/users', body);
+    }
+
+    byId('userSave').disabled = true;
+    request
+      .then(function (result) {
+        if (result.status === 200 || result.status === 201) {
+          byId('userDialog').close();
+          if (result.status === 201) showSecret(name, result.data.temporary_password);
+          else toast('Account updated');
+          return load();
+        }
+        var message = result.data.error || 'Something went wrong.';
+        if (result.status === 409) {
+          var input = fieldError('uEmail', message);
+          input.focus();
+        } else {
+          showAlert('userAlert', message);
+        }
+      })
+      .catch(function (err) { if (err.message !== 'not logged in') showAlert('userAlert', "Can't reach the server."); })
+      .then(function () { byId('userSave').disabled = false; });
+  });
+
+  /* ---------- Deactivate / activate ---------- */
+
+  function openConfirm(user) {
+    target = user;
+    byId('confirmTitle').textContent = 'Deactivate ' + role;
+    byId('confirmText').textContent = 'Deactivate ' + user.full_name + '?';
+    byId('confirmHint').textContent = 'Confirm to change this account from Active to Inactive. They will not be able to log in.';
+    openDialog('confirmDialog');
+  }
+
+  byId('confirmForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!target) return;
+    byId('confirmButton').disabled = true;
+    var who = target.full_name;
+    send('PATCH', '/api/admin/users/' + role + '/' + target.id, { status: 'inactive' })
+      .then(function (result) {
+        if (result.status === 200) {
+          byId('confirmDialog').close();
+          toast(who + ' deactivated');
+          return load();
+        }
+        showAlert('confirmAlert', result.data.error || 'Something went wrong.');
+      })
+      .catch(function (err) { if (err.message !== 'not logged in') showAlert('confirmAlert', "Can't reach the server."); })
+      .then(function () { byId('confirmButton').disabled = false; });
+  });
+
+  function setStatus(user, status) {
+    send('PATCH', '/api/admin/users/' + role + '/' + user.id, { status: status })
+      .then(function (result) {
+        if (result.status === 200) toast(user.full_name + ' activated');
+        else toast(result.data.error || 'Something went wrong.', true);
+        return load();
+      })
+      .catch(function (err) { if (err.message !== 'not logged in') toast("Can't reach the server.", true); });
+  }
+
+  /* ---------- Reset password and the one-time password box ---------- */
+
+  function showSecret(name, password) {
+    byId('secretWho').textContent = name;
+    byId('secretValue').textContent = password;
+    byId('copySecret').textContent = 'Copy';
+    byId('secretDialog').showModal();
+  }
+
+  byId('copySecret').addEventListener('click', function () {
+    var value = byId('secretValue').textContent;
+    var done = function () { byId('copySecret').textContent = 'Copied'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(done).catch(function () { /* the text can still be selected by hand */ });
+    }
+  });
+
+  function openReset(user) {
+    target = user;
+    byId('resetText').textContent = 'Reset the password for ' + user.full_name + '?';
+    openDialog('resetDialog');
+  }
+
+  byId('resetForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!target) return;
+    byId('resetButton').disabled = true;
+    var who = target.full_name;
+    send('POST', '/api/admin/users/' + role + '/' + target.id + '/reset-password')
+      .then(function (result) {
+        if (result.status === 200) {
+          byId('resetDialog').close();
+          showSecret(who, result.data.temporary_password);
+          return;
+        }
+        showAlert('resetAlert', result.data.error || 'Something went wrong.');
+      })
+      .catch(function (err) { if (err.message !== 'not logged in') showAlert('resetAlert', "Can't reach the server."); })
+      .then(function () { byId('resetButton').disabled = false; });
+  });
+
+  /* ---------- Patient detail (read-only) ---------- */
+
+  function openPatient(u) {
+    var rows = byId('patientRows');
+    rows.textContent = '';
+    [
+      ['Name', u.full_name],
+      ['Email', u.email],
+      ['Contact', u.contact_number || '—'],
+      ['Status', capitalize(u.status)],
+      ['Number of visits', String(u.visits)],
+      ['Last visit', formatDay(u.last_visit)],
+      ['Joined', dayText(u.created_at)]
+    ].forEach(function (pair) {
+      var row = el('div');
+      row.appendChild(el('dt', '', pair[0]));
+      row.appendChild(el('dd', '', pair[1]));
+      rows.appendChild(row);
+    });
+    byId('patientDialog').showModal();
+  }
+
+  /* ---------- Start ---------- */
+
+  send('GET', '/api/auth/me')
+    .then(function (result) {
+      var user = result.data.user;
+      if (!user) return null;
+      if (user.mustChangePassword) {
+        window.location.replace('/force-password/force-password.html');
+        return null;
+      }
+      if (user.role === 'patient') { window.location.replace('/patient/home.html'); return null; }
+      if (user.role === 'staff') { window.location.replace('/staff/console.html'); return null; }
+
+      me = user;
+      byId('headerName').textContent = user.name;
+      byId('headerInitials').textContent = initials(user.name);
+
+      return fetch('/api/public/board')
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (board) {
+          if (board) {
+            timeZone = board.time_zone;
+          }
+        })
+        .catch(function () { /* dates just use this device's time zone */ })
+        .then(function () {
+          updateClock();
+          setInterval(updateClock, 30 * 1000);
+          return send('GET', '/api/admin/services');
+        })
+        .then(function (result) {
+          // The "Assigned service" choices for staff accounts (only active services)
+          (result.data.services || []).filter(function (s) { return s.is_active; }).forEach(function (s) {
+            var option = el('option', '', s.service_name);
+            option.value = String(s.service_id);
+            byId('uService').appendChild(option);
+          });
+          return load();
+        });
+    })
+    .catch(function () { /* redirects are already happening */ });
+});

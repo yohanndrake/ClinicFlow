@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take a Number - ClinicFlow</title>
+  <link rel="stylesheet" href="/patient/take-number.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/patient/take-number.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+    <nav class="top-nav" aria-label="Patient pages">
+      <a href="/patient/home.html">Home</a>
+      <a href="/patient/take-number.html" aria-current="page">Take a Number</a>
+      <a href="/patient/ticket.html">My Ticket</a>
+      <a href="/patient/history.html">History</a>
+    </nav>
+
+    <div class="header-tools">
+      <a href="/patient/notifications.html" class="bell" id="bell" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.3A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21z" fill="currentColor"/>
+        </svg>
+        <span class="bell-count" id="bellCount" hidden></span>
+      </a>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-name" id="headerName"></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-title">
+      <h1 id="pageTitle">Take a Queue Number</h1>
+      <p class="now" id="now"></p>
+    </div>
+
+    <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+    <!-- Shown when the patient already has a ticket: only one at a time -->
+    <div class="banner" id="activeBanner" hidden>
+      <div>
+        <p class="banner-title">You already have an active ticket</p>
+        <p class="muted">Finish or cancel it before taking another number.</p>
+      </div>
+      <a href="/patient/ticket.html" id="bannerLink">View ticket</a>
+    </div>
+
+    <!-- The form: pick a service, then see the summary and get a number -->
+    <div class="layout" id="formArea">
+      <section aria-labelledby="serviceHeading">
+        <h2 class="section-title" id="serviceHeading">Select a service</h2>
+        <p class="muted" id="servicesLoading">Loading services...</p>
+        <div class="service-list" id="serviceList" role="radiogroup" aria-labelledby="serviceHeading"></div>
+      </section>
+
+      <form class="cf-card cf-card-raised summary" id="ticketForm" novalidate>
+        <h2 class="section-title">Summary</h2>
+
+        <div class="summary-service" id="summaryService" hidden>
+          <p class="summary-name" id="summaryName"></p>
+          <p class="muted" id="summaryMeta"></p>
+          <div class="summary-row">
+            <span id="summaryWaiting"></span>
+            <span id="summaryWait"></span>
+          </div>
+        </div>
+        <p class="muted" id="summaryEmpty">Choose a service to see its queue.</p>
+
+        <div class="field">
+          <label class="cf-label" for="note">Optional note</label>
+          <textarea class="cf-input" id="note" rows="3" maxlength="100" aria-describedby="noteHint"></textarea>
+          <p class="hint hint-row" id="noteHint">
+            <span>Do not enter medical details.</span>
+            <span id="noteCount">0/100</span>
+          </p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="travel">Travel time (minutes)</label>
+          <input class="cf-input" id="travel" type="number" inputmode="numeric" min="0" max="600" step="1" aria-describedby="travelHint travelError">
+          <p class="hint" id="travelHint">Default travel time &middot; editable</p>
+          <p class="cf-error" id="travelError" hidden></p>
+        </div>
+
+        <div class="alert alert-error" id="formAlert" role="alert" hidden></div>
+
+        <button type="submit" class="cf-btn cf-btn-primary cf-btn-block" id="submitButton" disabled>Get my number</button>
+      </form>
+    </div>
+
+    <!-- Shown after a number is issued -->
+    <section class="cf-card cf-card-raised issued" id="issued" aria-live="polite" hidden>
+      <h2 class="section-title">Ticket issued</h2>
+      <p class="issued-number" id="issuedNumber"></p>
+      <p class="issued-service" id="issuedService"></p>
+      <p class="issued-strong" id="issuedPosition"></p>
+      <p class="muted" id="issuedWait"></p>
+      <a href="/patient/ticket.html" class="cf-btn cf-btn-primary cf-btn-block" id="issuedLink">View my ticket</a>
+    </section>
+  </main>
+
+  <nav class="tab-bar" aria-label="Patient pages">
+    <a href="/patient/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+    <a href="/patient/take-number.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
+    <a href="/patient/ticket.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>
+    <a href="/patient/history.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+  </nav>
+
+</body>
+</html>

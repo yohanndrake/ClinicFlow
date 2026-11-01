@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users - ClinicFlow</title>
+  <link rel="stylesheet" href="/admin/users.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/admin/users.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Admin console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Administrator</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side-nav" aria-label="Admin pages">
+      <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
+      <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
+      <a href="/admin/services.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Services</span></a>
+      <a href="/admin/users.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Users</span></a>
+      <a href="/admin/records.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+      <a href="/admin/settings.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Settings</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Users</h1>
+
+      <div class="tabs" id="tabs" role="group" aria-label="Account type">
+        <button type="button" data-role="staff" aria-pressed="true">Staff</button>
+        <button type="button" data-role="patient" aria-pressed="false">Patients</button>
+        <button type="button" data-role="admin" aria-pressed="false">Admins</button>
+      </div>
+
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+      <form class="cf-card toolbar" id="toolbar" aria-label="Filter users">
+        <div class="filter">
+          <label class="cf-label" for="search">Search</label>
+          <input class="cf-input" type="search" id="search" placeholder="Name or email" autocomplete="off">
+        </div>
+        <div class="filter">
+          <label class="cf-label" for="status">Status</label>
+          <select class="cf-input" id="status">
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="button" class="cf-btn cf-btn-secondary" id="addUser">Add Staff</button>
+        </div>
+      </form>
+
+      <p class="muted" id="loading">Loading users...</p>
+
+      <div class="table-wrap">
+        <table class="grid-table" id="table" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Name</th><th scope="col">Email</th><th scope="col">Contact</th>
+              <th scope="col">Status</th><th scope="col" id="detailHeading">Assigned service</th>
+              <th scope="col">Created</th><th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="cf-card empty-card" id="empty" hidden><h2>No users found</h2><p class="muted">Try a different search or status.</p></div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Add / edit a staff or admin account -->
+  <dialog id="userDialog" class="wide" aria-labelledby="userTitle">
+    <form class="dialog-body" id="userForm" novalidate>
+      <div class="dialog-head"><h2 id="userTitle">Add Staff</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="cf-label" for="uName">Name</label>
+          <input class="cf-input" id="uName" maxlength="100" autocomplete="off">
+          <p class="cf-error" id="uNameError" hidden></p>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="uEmail">Email</label>
+          <input class="cf-input" id="uEmail" type="email" autocomplete="off">
+          <p class="cf-error" id="uEmailError" hidden></p>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="cf-label" for="uContact">Contact</label>
+          <input class="cf-input" id="uContact" type="tel" maxlength="20" autocomplete="off">
+          <p class="cf-error" id="uContactError" hidden></p>
+        </div>
+        <div class="field" id="passwordField">
+          <label class="cf-label" for="uPassword">Temporary password</label>
+          <input class="cf-input" id="uPassword" type="text" autocomplete="off" aria-describedby="uPasswordHint uPasswordError">
+          <p class="hint" id="uPasswordHint">Leave empty to generate one. They must change it at first login.</p>
+          <p class="cf-error" id="uPasswordError" hidden></p>
+        </div>
+      </div>
+
+      <div class="field-row" id="staffFields">
+        <div class="field">
+          <label class="cf-label" for="uService">Assigned service</label>
+          <select class="cf-input" id="uService"><option value="">Not assigned</option></select>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="uCounter">Counter label</label>
+          <input class="cf-input" id="uCounter" maxlength="30" placeholder="e.g. Room 1" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="field" id="statusField">
+        <label class="cf-label" for="uStatus">Status</label>
+        <select class="cf-input" id="uStatus">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      <div class="alert alert-error" id="userAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="userSave">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <form class="dialog-body" id="confirmForm">
+      <div class="dialog-head"><h2 id="confirmTitle">Deactivate account</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="dialog-strong" id="confirmText"></p>
+      <p class="muted" id="confirmHint"></p>
+      <div class="alert alert-error" id="confirmAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-danger" id="confirmButton">Deactivate</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="resetDialog" aria-labelledby="resetTitle">
+    <form class="dialog-body" id="resetForm">
+      <div class="dialog-head"><h2 id="resetTitle">Reset Password</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="dialog-strong" id="resetText"></p>
+      <p class="muted">A new temporary password is created. They must change it on their next login.</p>
+      <div class="alert alert-error" id="resetAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="resetButton">Reset Password</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Shows a temporary password once, after creating an account or resetting a password -->
+  <dialog id="secretDialog" aria-labelledby="secretTitle">
+    <div class="dialog-body">
+      <div class="dialog-head"><h2 id="secretTitle">Temporary password</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="dialog-strong" id="secretWho"></p>
+      <p class="secret-box" id="secretValue"></p>
+      <p class="muted">Copy it and give it to the user now. It will not be shown again. They must change it on next login.</p>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" id="copySecret">Copy</button>
+        <button type="button" class="cf-btn cf-btn-primary" data-close>Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="patientDialog" aria-labelledby="patientTitle">
+    <div class="dialog-body">
+      <div class="dialog-head"><h2 id="patientTitle">Patient Detail</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <dl class="detail-rows" id="patientRows"></dl>
+      <p class="hint">Read-only.</p>
+      <div class="dialog-actions"><button type="button" class="cf-btn cf-btn-secondary" data-close>Close</button></div>
+    </div>
+  </dialog>
+
+</body>
+</html>

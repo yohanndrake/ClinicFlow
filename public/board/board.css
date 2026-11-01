@@ -1,0 +1,526 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
+
+/* ---------- Design tokens ---------- */
+
+:root,
+[data-theme="light"] {
+  /* surfaces and text */
+  --cf-bg: #FFF8F1;
+  --cf-surface: #FFFFFF;
+  --cf-surface-2: #F6F2EE;
+  --cf-text: #141414;
+  --cf-text-muted: #6B6560;
+  --cf-border: #ECE4DD;
+
+  /* accent */
+  --cf-accent: #FF6A00;
+  --cf-accent-strong: #D9480F;
+  --cf-accent-hover: #B93C0B;
+  --cf-accent-soft: #FFE8D6;
+  --cf-accent-text: #B93C0B;
+  --cf-on-accent: #FFFFFF;
+
+  /* danger */
+  --cf-danger: #C62F2F;
+  --cf-danger-soft: #FDE2E2;
+
+  /* status: bg / text pairs */
+  --cf-open-bg: #DCFCE7;      --cf-open-fg: #166534;
+  --cf-paused-bg: #FEF3C7;    --cf-paused-fg: #7A4A00;
+  --cf-closed-bg: #FEE2E2;    --cf-closed-fg: #991B1B;
+
+  /* shape */
+  --cf-radius-sm: 8px;
+  --cf-radius: 12px;
+  --cf-radius-lg: 16px;
+  --cf-radius-pill: 999px;
+  --cf-shadow-sm: 0 1px 2px rgba(20, 20, 20, .06);
+  --cf-shadow-md: 0 8px 24px rgba(120, 60, 20, .08);
+
+  /* spacing */
+  --cf-space-1: 4px;  --cf-space-2: 8px;  --cf-space-3: 12px;
+  --cf-space-4: 16px; --cf-space-5: 24px; --cf-space-6: 32px; --cf-space-7: 48px;
+
+  /* type */
+  --cf-font-head: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cf-font-body: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* new design tokens */
+  --cf-bg-gradient: linear-gradient(135deg, #FFE3CC 0%, #FFF6EE 45%, #F9DCE8 100%);
+  --cf-panel: rgba(255, 255, 255, .72);
+  --cf-waiting-bg: #DBEAFE;
+  --cf-waiting-fg: #1E40AF;
+  --cf-near-bg: #FEF3C7;
+  --cf-near-fg: #7A4A00;
+  --cf-called-bg: #15803D;
+  --cf-called-fg: #FFFFFF;
+  --cf-serving-bg: #15803D;
+  --cf-serving-fg: #FFFFFF;
+  --cf-completed-bg: #CCFBF1;
+  --cf-completed-fg: #115E59;
+  --cf-skipped-bg: #EDE9FE;
+  --cf-skipped-fg: #5B21B6;
+  --cf-cancelled-bg: #EEE7E0;
+  --cf-cancelled-fg: #6B5B4F;
+  --cf-radius-xl: 24px;
+  --cf-font: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+[data-theme="dark"] {
+  --cf-bg: #1A1411;
+  --cf-surface: #2A1E17;
+  --cf-surface-2: #362720;
+  --cf-text: #FFF1E6;
+  --cf-text-muted: #C4A998;
+  --cf-border: #43302A;
+
+  --cf-accent: #FF8A4C;
+  --cf-accent-strong: #FF8A4C;
+  --cf-accent-hover: #FFA06B;
+  --cf-accent-soft: #4A2A18;
+  --cf-accent-text: #FFB98A;
+  --cf-on-accent: #3A1600;
+
+  --cf-danger: #FF8A80;
+  --cf-danger-soft: #4A1D1D;
+
+  --cf-open-bg: #153824;      --cf-open-fg: #86EFAC;
+  --cf-paused-bg: #3D2F0E;    --cf-paused-fg: #FCD34D;
+  --cf-closed-bg: #4A1D1D;    --cf-closed-fg: #FCA5A5;
+
+  --cf-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --cf-shadow-md: 0 8px 24px rgba(0, 0, 0, .35);
+
+  /* new design tokens */
+  --cf-bg-gradient: linear-gradient(135deg, #2A1A12 0%, #1A1411 50%, #2A1622 100%);
+  --cf-panel: rgba(39, 27, 21, .78);
+  --cf-waiting-bg: #1E2F52;
+  --cf-waiting-fg: #9DC0FF;
+  --cf-near-bg: #3D2F0E;
+  --cf-near-fg: #FCD34D;
+  --cf-called-bg: #4ADE80;
+  --cf-called-fg: #052E16;
+  --cf-serving-bg: #4ADE80;
+  --cf-serving-fg: #052E16;
+  --cf-completed-bg: #0F3D3A;
+  --cf-completed-fg: #5EEAD4;
+  --cf-skipped-bg: #2E2552;
+  --cf-skipped-fg: #C4B5FD;
+  --cf-cancelled-bg: #3A302B;
+  --cf-cancelled-fg: #B8A89C;
+}
+
+/* ---------- Base (phone first) ---------- */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--cf-bg);
+  color: var(--cf-text);
+  font-family: var(--cf-font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  font-family: var(--cf-font-head);
+  font-weight: 800;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cf-accent);
+  outline-offset: 2px;
+}
+
+[hidden] { display: none !important; }
+
+/* Text for screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Components used on this page ---------- */
+
+.cf-btn {
+  min-height: 42px;
+  padding: 0 var(--cf-space-4);
+  border-radius: var(--cf-radius);
+  border: 1.5px solid transparent;
+  font-family: var(--cf-font-head);
+  font-weight: 700;
+  font-size: .9375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .08s, background .15s;
+}
+.cf-btn:active { transform: translateY(2px); }
+.cf-btn-secondary {
+  background: var(--cf-surface);
+  color: var(--cf-text);
+  border-color: var(--cf-border);
+}
+
+.cf-card {
+  background: var(--cf-surface);
+  border: 1px solid var(--cf-border);
+  border-radius: var(--cf-radius-lg);
+  padding: var(--cf-space-4);
+}
+.cf-card-raised { box-shadow: var(--cf-shadow-md); }
+
+.cf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--cf-radius-pill);
+  font-size: .8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cf-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.cf-open   { background: var(--cf-open-bg);   color: var(--cf-open-fg); }
+.cf-paused { background: var(--cf-paused-bg); color: var(--cf-paused-fg); }
+.cf-closed { background: var(--cf-closed-bg); color: var(--cf-closed-fg); }
+
+/* ---------- Header (phone: brand and theme on the first row, clock and full screen below) ---------- */
+
+.board-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cf-space-3);
+  padding: var(--cf-space-3) var(--cf-space-4);
+  background: var(--cf-surface);
+  border-bottom: 1px solid var(--cf-border);
+}
+
+.brand {
+  font-family: var(--cf-font-head);
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--cf-text);
+  text-decoration: none;
+}
+
+.board-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cf-space-3);
+  width: 100%;
+}
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+  font-size: .875rem;
+  color: var(--cf-text-muted);
+  line-height: 1.3;
+}
+.clock strong {
+  font-family: var(--cf-font-head);
+  font-size: 1.25rem;
+  color: var(--cf-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-switch {
+  display: inline-flex;
+  border: 1px solid var(--cf-border);
+  border-radius: var(--cf-radius-pill);
+  overflow: hidden;
+}
+.theme-switch button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--cf-text-muted);
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+.theme-switch button[aria-pressed="true"] {
+  background: var(--cf-accent-soft);
+  color: var(--cf-accent-text);
+}
+
+/* ---------- Boards ---------- */
+
+.board-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--cf-space-4);
+}
+
+.boards {
+  display: grid;
+  gap: var(--cf-space-4);
+}
+
+.empty-message {
+  padding: var(--cf-space-7) 0;
+  text-align: center;
+  color: var(--cf-text-muted);
+  font-size: 1.125rem;
+}
+
+.service-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cf-space-3);
+  padding-bottom: var(--cf-space-3);
+  border-bottom: 1px solid var(--cf-border);
+}
+.service-head h2 { font-size: 1.25rem; }
+
+.service-body {
+  padding-top: var(--cf-space-5);
+  text-align: center;
+}
+
+.board-label {
+  margin: 0;
+  font-family: var(--cf-font-head);
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--cf-text-muted);
+}
+
+/* The big number(s) being served. A service with two counters shows two numbers side by side. */
+.serving-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--cf-space-4);
+  margin-top: var(--cf-space-2);
+}
+
+.board-number {
+  font-family: var(--cf-font-head);
+  font-weight: 900;
+  font-size: clamp(4rem, 22vw, 8rem);
+  line-height: 1.1;
+  letter-spacing: 1px;
+  color: var(--cf-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.board-number.is-empty { color: var(--cf-text-muted); }
+
+.board-room {
+  margin: 0;
+  font-family: var(--cf-font-head);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+/* Paused / closed / connection lost */
+.board-message {
+  margin: 0;
+  padding: var(--cf-space-6) 0 var(--cf-space-5);
+  font-family: var(--cf-font-head);
+  font-weight: 800;
+  font-size: clamp(1.75rem, 8vw, 3.5rem);
+}
+.board-note {
+  margin: 0;
+  color: var(--cf-text-muted);
+  font-size: 1.0625rem;
+}
+
+.next-up {
+  margin-top: var(--cf-space-5);
+  padding-top: var(--cf-space-4);
+  border-top: 1px solid var(--cf-border);
+}
+.next-up h3 { font-size: 1.125rem; margin-bottom: var(--cf-space-3); }
+
+.next-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: var(--cf-space-2);
+}
+.next-item {
+  padding: var(--cf-space-3) var(--cf-space-2);
+  background: var(--cf-surface-2);
+  border-radius: var(--cf-radius);
+  font-family: var(--cf-font-head);
+  font-weight: 800;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.waiting-count {
+  margin: var(--cf-space-3) 0 0;
+  color: var(--cf-text-muted);
+  font-weight: 600;
+}
+
+/* ---------- Footer ---------- */
+
+.board-footer {
+  padding: var(--cf-space-3) var(--cf-space-4);
+  border-top: 1px solid var(--cf-border);
+  background: var(--cf-surface);
+  text-align: center;
+  color: var(--cf-text-muted);
+  font-size: .875rem;
+}
+.board-footer p { margin: 0; }
+.board-footer.is-stale { color: var(--cf-danger); font-weight: 600; }
+
+/* ---------- Tablet and up: one row header, bigger board ---------- */
+
+@media (min-width: 768px) {
+  .board-header { flex-wrap: nowrap; padding: var(--cf-space-3) var(--cf-space-6); }
+  .board-tools { width: auto; flex-wrap: nowrap; }
+  .clock { flex-direction: row; align-items: baseline; gap: var(--cf-space-3); margin-right: 0; }
+
+  .board-main { padding: var(--cf-space-6); }
+  .cf-card { padding: var(--cf-space-6); }
+  .service-head h2 { font-size: 1.75rem; }
+
+  .board-number { font-size: clamp(6rem, 16vw, 12rem); }
+  .board-room { font-size: 1.75rem; }
+  .board-label { font-size: 1.5rem; }
+  .next-up h3 { font-size: 1.5rem; }
+  .next-item { font-size: 1.75rem; padding: var(--cf-space-4) var(--cf-space-2); }
+  .waiting-count { font-size: 1.25rem; }
+}
+
+/* A big TV: make everything readable from across the room */
+@media (min-width: 1400px) {
+  .board-main { max-width: 1600px; }
+  .board-number { font-size: clamp(10rem, 14vw, 16rem); }
+  .next-item { font-size: 2.5rem; }
+  .board-room { font-size: 2.25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-btn { transition: none; }
+}
+
+/* ---------- Design layer: warm gradient, glass panels, pill tabs ---------- */
+
+body { background: var(--cf-bg-gradient); background-attachment: fixed; }
+h1, h2, h3, h4 { font-family: var(--cf-font-head); font-weight: 800; }
+
+.site-header {
+  background: var(--cf-panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 0;
+  border-radius: var(--cf-radius-xl);
+  margin: var(--cf-space-3) var(--cf-space-3) 0;
+}
+
+/* Staff and admin: the side links are a rounded panel, the active link is solid orange */
+.side-nav {
+  background: var(--cf-panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 0;
+  border-radius: var(--cf-radius-xl);
+  margin: var(--cf-space-3) var(--cf-space-3) 0;
+}
+.side-nav a { border-radius: var(--cf-radius); }
+.side-nav a:hover { background: var(--cf-accent-soft); }
+.side-nav a[aria-current="page"] { background: var(--cf-accent-strong); color: var(--cf-on-accent); }
+
+/* Patient: the top links become pills */
+.top-nav a[aria-current="page"] { color: var(--cf-accent-text); }
+
+/* Buttons: flat, rounded; secondary buttons are orange outlines */
+.cf-btn { border-radius: var(--cf-radius); font-family: var(--cf-font-body); font-weight: 700; }
+.cf-btn-primary { box-shadow: none; }
+.cf-btn-secondary { background: transparent; color: var(--cf-accent-text); border-color: var(--cf-accent-strong); }
+.cf-btn-secondary:hover:not(:disabled) { background: var(--cf-accent-soft); }
+.cf-btn-danger { background: transparent; }
+.cf-btn-danger:hover:not(:disabled) { background: var(--cf-danger-soft); }
+
+/* Cards and badges */
+.cf-card { border-radius: var(--cf-radius-lg); box-shadow: var(--cf-shadow-sm); }
+.cf-card-raised { box-shadow: var(--cf-shadow-md); }
+.cf-badge { font-size: .75rem; }
+.cf-near { background: var(--cf-near-bg); color: var(--cf-near-fg); }
+
+/* Pill tabs: the selected one is solid orange */
+.tabs button, .pill {
+  border-width: 1px;
+  background: var(--cf-surface);
+  color: var(--cf-text-muted);
+  font-family: var(--cf-font-body);
+  font-size: .875rem;
+}
+.tabs button[aria-pressed="true"], .pill[aria-pressed="true"], .pill.active {
+  background: var(--cf-accent-strong);
+  border-color: var(--cf-accent-strong);
+  color: var(--cf-on-accent);
+}
+
+.cf-input:focus { box-shadow: 0 0 0 3px var(--cf-accent-soft); }
+
+@media (min-width: 768px) {
+  .top-nav a { padding: var(--cf-space-2) var(--cf-space-4); border-bottom: 0; border-radius: var(--cf-radius); }
+  .top-nav a[aria-current="page"] { background: var(--cf-accent-strong); color: var(--cf-on-accent); }
+
+  .shell { gap: var(--cf-space-3); padding: 0 var(--cf-space-3) var(--cf-space-3); }
+  .shell > .side-nav { margin: var(--cf-space-3) 0 0; align-self: start; border-right: 0; }
+  .shell > .page {
+    margin-top: var(--cf-space-3);
+    background: var(--cf-panel);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-radius: var(--cf-radius-xl);
+  }
+}
+
+/* ---------- Design layer 3: logo mark ---------- */
+
+.brand { display: inline-flex; align-items: center; gap: var(--cf-space-2); }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--cf-radius);
+  background: var(--cf-accent-strong);
+  color: var(--cf-on-accent);
+}
+.brand-mark svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+
+/* The top bar floats like the other pages */
+.board-header {
+  margin: var(--cf-space-3) var(--cf-space-3) 0;
+  border: 0;
+  border-radius: var(--cf-radius-xl);
+  background: var(--cf-panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}

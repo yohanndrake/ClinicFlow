@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Now Serving - ClinicFlow</title>
+  <link rel="stylesheet" href="/board/board.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/board/board.js"></script>
+</head>
+<body>
+
+  <header class="board-header">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+    <div class="board-tools">
+      <div class="clock" aria-label="Current date and time">
+        <span id="clockDate"></span>
+        <strong id="clockTime"></strong>
+      </div>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <!-- Hidden by the script on browsers that cannot do full screen -->
+      <button type="button" class="cf-btn cf-btn-secondary" id="fullscreenButton">Full screen</button>
+    </div>
+  </header>
+
+  <main class="board-main">
+    <!-- One panel per service is drawn in here by board.js -->
+    <div class="boards" id="boards"></div>
+
+    <p class="empty-message" id="emptyMessage" hidden>No services are available right now.</p>
+    <p class="empty-message" id="loadingMessage">Loading the queue...</p>
+  </main>
+
+  <footer class="board-footer">
+    <p id="lastUpdated">Waiting for the first update...</p>
+  </footer>
+
+  <!-- Read out by screen readers when a new number is called -->
+  <div class="sr-only" id="announcer" aria-live="polite"></div>
+
+</body>
+</html>

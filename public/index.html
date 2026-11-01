@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClinicFlow - Your same-day clinic visit starts here</title>
+    <meta
+      name="description"
+      content="Take a same-day queue number online and track your turn at the clinic."
+    />
+    <link rel="stylesheet" href="/index.css" />
+    <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+    <script src="/index.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+
+      <div class="header-tools">
+        <div class="theme-switch" role="group" aria-label="Color theme">
+          <button
+            type="button"
+            data-theme-set="light"
+            aria-label="Light mode"
+            title="Light mode"
+          >
+            &#9728;
+          </button>
+          <button
+            type="button"
+            data-theme-set="dark"
+            aria-label="Dark mode"
+            title="Dark mode"
+          >
+            &#9790;
+          </button>
+        </div>
+
+        <!-- Phones: this button opens the menu below. Desktop: hidden, the links are shown directly. -->
+        <button
+          type="button"
+          class="menu-button"
+          id="menuButton"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="siteMenu"
+        >
+          &#9776;
+        </button>
+      </div>
+
+      <nav class="site-menu" id="siteMenu" aria-label="Main menu">
+        <a href="/board/board.html">Now Serving</a>
+        <a
+          href="/login/login.html"
+          class="cf-btn cf-btn-secondary"
+          id="menuLogin"
+          >Login</a
+        >
+        <a
+          href="/register/register.html"
+          class="cf-btn cf-btn-secondary"
+          id="menuRegister"
+          >Register</a
+        >
+        <!-- Shown instead of Login and Register when someone is already logged in -->
+        <a
+          href="/login/login.html"
+          class="cf-btn cf-btn-secondary"
+          id="menuAccount"
+          hidden
+          >My page</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Your same-day clinic visit starts here.</h1>
+        <p class="hero-text">
+          Take a same-day queue number online and track your turn at
+          <span id="heroClinicName">the clinic</span>.
+        </p>
+        <div class="hero-buttons">
+          <a
+            href="/login/login.html"
+            class="cf-btn cf-btn-primary"
+            id="takeNumberButton"
+            >Take a queue number</a
+          >
+          <a href="/board/board.html" class="cf-btn cf-btn-secondary"
+            >View Now Serving</a
+          >
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="queueHeading">
+        <h2 class="visually-hidden" id="queueHeading">Today's queue</h2>
+
+        <!-- One card per service is drawn in here by index.js -->
+        <div class="services" id="services" aria-live="polite"></div>
+        <p class="queue-message" id="queueMessage">Loading today's queue...</p>
+      </section>
+
+      <section class="section" aria-labelledby="howHeading">
+        <h2 id="howHeading">How it works</h2>
+        <ol class="steps">
+          <li class="cf-card step">
+            <span class="step-number" aria-hidden="true">1</span
+            ><span>Register</span>
+          </li>
+          <li class="cf-card step">
+            <span class="step-number" aria-hidden="true">2</span
+            ><span>Take a number</span>
+          </li>
+          <li class="cf-card step">
+            <span class="step-number" aria-hidden="true">3</span
+            ><span>Track your turn</span>
+          </li>
+          <li class="cf-card step">
+            <span class="step-number" aria-hidden="true">4</span
+            ><span>Get notified</span>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <strong id="footerName">ClinicFlow</strong>
+      <span id="footerHours"></span>
+    </footer>
+  </body>
+</html>

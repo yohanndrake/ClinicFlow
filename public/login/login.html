@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - ClinicFlow</title>
+  <link rel="stylesheet" href="/login/login.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/login/login.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span>ClinicFlow</span></a>
+
+    <div class="header-tools">
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <!-- Phones: this button opens the menu below. Desktop: hidden, the links are shown directly. -->
+      <button type="button" class="menu-button" id="menuButton" aria-label="Menu" aria-expanded="false" aria-controls="siteMenu">&#9776;</button>
+    </div>
+
+    <nav class="site-menu" id="siteMenu" aria-label="Main menu">
+      <a href="/board/board.html">Now Serving</a>
+      <a href="/login/login.html" class="cf-btn cf-btn-secondary menu-login" aria-current="page">Login</a>
+      <a href="/register/register.html" class="cf-btn cf-btn-secondary menu-register">Register</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="cf-card cf-card-raised login-card">
+      <h1>Login</h1>
+
+      <!-- Shows: invalid credentials, account deactivated, too many attempts, or a connection problem -->
+      <div class="alert" id="formAlert" role="alert" hidden></div>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label class="cf-label" for="email">Email</label>
+          <input class="cf-input" type="email" id="email" name="email" autocomplete="email" inputmode="email" required>
+          <p class="cf-error" id="emailError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label class="cf-label" for="password">Password</label>
+          <div class="password-wrap">
+            <input class="cf-input" type="password" id="password" name="password" autocomplete="current-password" required>
+            <button type="button" class="show-hide" id="togglePassword" aria-controls="password">Show</button>
+          </div>
+          <p class="cf-error" id="passwordError" hidden></p>
+        </div>
+
+        <button type="submit" class="cf-btn cf-btn-primary cf-btn-block" id="loginButton">Login</button>
+      </form>
+
+      <p class="alt-link">Don't have an account? <a href="/register/register.html">Register</a></p>
+      <p class="help-text">Forgot your password? Contact the clinic admin.</p>
+    </section>
+  </main>
+
+</body>
+</html>

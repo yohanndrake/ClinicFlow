@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queue Console - ClinicFlow</title>
+  <link rel="stylesheet" href="/staff/console.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/staff/console.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Staff console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Staff</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <!-- Phones: tabs under the header. Desktop: a sidebar. -->
+    <nav class="side-nav" aria-label="Staff pages">
+      <a href="/staff/console.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
+      <a href="/staff/records.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Queue Console</h1>
+
+      <div class="alert alert-error" id="connectionAlert" role="alert" hidden>Connection lost &mdash; updates paused. Trying again...</div>
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+      <p class="muted" id="loading">Loading the queue...</p>
+
+      <!-- Nobody is assigned to a service yet -->
+      <div class="cf-card" id="noService" hidden>
+        <h2>No service assigned</h2>
+        <p class="muted">You are not assigned to a service yet. Ask an admin to assign you to one.</p>
+      </div>
+
+      <div id="consoleArea" hidden>
+        <!-- Which service, its state, room and hours -->
+        <section class="service-bar" aria-label="Service">
+          <div class="service-main">
+            <label class="switcher" id="switcher" hidden>
+              <span class="visually-hidden">Service</span>
+              <select class="cf-input" id="serviceSelect"></select>
+            </label>
+            <h2 id="serviceName"></h2>
+            <span class="cf-badge" id="serviceBadge"></span>
+            <span id="serviceRoom"></span>
+          </div>
+          <p class="muted" id="serviceMeta"></p>
+        </section>
+
+        <div class="banner" id="stateBanner" role="status" hidden></div>
+
+        <!-- Five counters -->
+        <dl class="counters" aria-label="Today's totals">
+          <div class="counter"><dt>Waiting</dt><dd id="countWaiting">0</dd></div>
+          <div class="counter"><dt>Serving</dt><dd id="countServing">0</dd></div>
+          <div class="counter"><dt>Completed</dt><dd id="countCompleted">0</dd></div>
+          <div class="counter"><dt>Skipped</dt><dd id="countSkipped">0</dd></div>
+          <div class="counter"><dt>Cancelled</dt><dd id="countCancelled">0</dd></div>
+        </dl>
+
+        <div class="top-row">
+          <section class="cf-card" aria-labelledby="servingHeading">
+            <div class="card-head">
+              <h2 id="servingHeading">Current Serving</h2>
+              <span class="chips" id="servingChips"></span>
+            </div>
+
+            <div id="servingNone" class="muted">No one is being served right now.</div>
+
+            <div id="servingHas" hidden>
+              <div class="serving-main">
+                <p class="serving-number" id="servingNumber"></p>
+                <div>
+                  <p class="serving-name" id="servingName"></p>
+                  <p class="muted" id="servingNote"></p>
+                </div>
+              </div>
+              <div class="serving-time">
+                <p class="muted" id="servingCalled"></p>
+                <p class="grace" id="servingGrace"></p>
+              </div>
+              <div class="button-row">
+                <button type="button" class="cf-btn cf-btn-primary" id="completeButton">Complete</button>
+                <button type="button" class="cf-btn cf-btn-secondary" id="skipButton">Skip</button>
+                <button type="button" class="cf-btn cf-btn-secondary" id="cancelServingButton">Cancel</button>
+                <button type="button" class="cf-btn cf-btn-secondary" id="reannounceButton">Re-announce</button>
+                <button type="button" class="cf-btn cf-btn-secondary" id="arrivedButton">Mark arrived</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="cf-card call-card" aria-label="Call next">
+            <button type="button" class="call-button" id="callNext">Call Next</button>
+            <p class="muted" id="nextUp"></p>
+          </section>
+        </div>
+
+        <section class="cf-card queue-card" aria-labelledby="queueHeading">
+          <div class="card-head">
+            <h2 id="queueHeading">Queue</h2>
+            <div class="search">
+              <label class="cf-label" for="search">Search</label>
+              <input class="cf-input" type="search" id="search" placeholder="Name or number">
+            </div>
+          </div>
+
+          <div class="tabs" id="tabs" role="group" aria-label="Show tickets">
+            <button type="button" data-tab="waiting" aria-pressed="true">Waiting</button>
+            <button type="button" data-tab="serving" aria-pressed="false">Serving</button>
+            <button type="button" data-tab="completed" aria-pressed="false">Completed</button>
+            <button type="button" data-tab="skipped" aria-pressed="false">Skipped</button>
+            <button type="button" data-tab="cancelled" aria-pressed="false">Cancelled</button>
+            <button type="button" data-tab="all" aria-pressed="false">All</button>
+          </div>
+          <label class="check-row"><input type="checkbox" id="showDeleted"> Show deleted tickets</label>
+
+          <table class="queue" id="queueTable" hidden>
+            <thead>
+              <tr>
+                <th scope="col">Position</th><th scope="col">Number</th><th scope="col">Name</th>
+                <th scope="col">Time joined</th><th scope="col">Waiting duration</th><th scope="col">Priority</th>
+                <th scope="col">Arrived</th><th scope="col">Note</th><th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="queueRows"></tbody>
+          </table>
+          <p class="muted empty-note" id="queueEmpty" hidden></p>
+        </section>
+
+        <div class="footer-actions">
+          <button type="button" class="cf-btn cf-btn-secondary" id="addWalkIn">Add Walk-in</button>
+          <div class="footer-right">
+            <button type="button" class="cf-btn cf-btn-secondary" id="pauseButton">Pause Service</button>
+            <button type="button" class="cf-btn cf-btn-secondary" id="closeButton">Close for the Day</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- ===== Dialogs ===== -->
+
+  <dialog id="walkinDialog" aria-labelledby="walkinTitle">
+    <form class="dialog-body" id="walkinForm" novalidate>
+      <div class="dialog-head"><h2 id="walkinTitle">Add Walk-in</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <div class="field">
+        <label class="cf-label" for="walkinName">Name *</label>
+        <input class="cf-input" id="walkinName" maxlength="100" autocomplete="off">
+        <p class="cf-error" id="walkinNameError" hidden></p>
+      </div>
+      <label class="check-row"><input type="checkbox" id="walkinPriority"> Priority</label>
+      <div class="field">
+        <label class="cf-label" for="walkinNote">Note (optional)</label>
+        <textarea class="cf-input" id="walkinNote" rows="3" maxlength="100"></textarea>
+      </div>
+      <div class="alert alert-error" id="walkinAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="walkinSubmit">Add Walk-in</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="editDialog" aria-labelledby="editTitle">
+    <form class="dialog-body" id="editForm" novalidate>
+      <div class="dialog-head"><h2 id="editTitle">Edit Ticket</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="muted" id="editTicket"></p>
+      <div class="field">
+        <label class="cf-label" for="editNote">Note</label>
+        <textarea class="cf-input" id="editNote" rows="3" maxlength="100"></textarea>
+      </div>
+      <label class="check-row"><input type="checkbox" id="editPriority"> Priority</label>
+      <div class="field" id="editNameField">
+        <label class="cf-label" for="editName">Walk-in name</label>
+        <input class="cf-input" id="editName" maxlength="100" autocomplete="off">
+        <p class="cf-error" id="editNameError" hidden></p>
+      </div>
+      <div class="alert alert-error" id="editAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="editSubmit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="stopDialog" aria-labelledby="stopTitle">
+    <form class="dialog-body" id="stopForm" novalidate>
+      <div class="dialog-head"><h2 id="stopTitle">Skip or Cancel</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="muted" id="stopTicket"></p>
+      <div class="field">
+        <label class="cf-label" for="stopReason">Reason</label>
+        <select class="cf-input" id="stopReason">
+          <option value="Not present when called">Not present when called</option>
+          <option value="Patient request">Patient request</option>
+          <option value="Wrong service">Wrong service</option>
+          <option value="Duplicate ticket">Duplicate ticket</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="cf-label" for="stopExtra">Additional text (optional)</label>
+        <textarea class="cf-input" id="stopExtra" rows="3" maxlength="60"></textarea>
+      </div>
+      <p class="hint">Choose Skip or Cancel ticket to submit. Dismiss closes without changes.</p>
+      <div class="alert alert-error" id="stopAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Dismiss</button>
+        <button type="button" class="cf-btn cf-btn-secondary" id="stopSkip">Skip</button>
+        <button type="button" class="cf-btn cf-btn-danger" id="stopCancel">Cancel ticket</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="deleteDialog" aria-labelledby="deleteTitle">
+    <form class="dialog-body" id="deleteForm" novalidate>
+      <div class="dialog-head"><h2 id="deleteTitle">Delete Ticket</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="muted" id="deleteTicket"></p>
+      <div class="field">
+        <label class="cf-label" for="deleteReason">Reason * (required)</label>
+        <input class="cf-input" id="deleteReason" maxlength="100" autocomplete="off">
+        <p class="cf-error" id="deleteReasonError" hidden></p>
+      </div>
+      <p class="hint">Excluded from reports. You can restore it later from "Show deleted tickets".</p>
+      <div class="alert alert-error" id="deleteAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-danger" id="deleteSubmit">Delete ticket</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pauseDialog" aria-labelledby="pauseTitle">
+    <form class="dialog-body" id="pauseForm" novalidate>
+      <div class="dialog-head"><h2 id="pauseTitle">Pause Service</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="muted" id="pauseService"></p>
+      <div class="field">
+        <label class="cf-label" for="pauseReason">Reason (optional)</label>
+        <input class="cf-input" id="pauseReason" maxlength="100" placeholder="e.g. Back in 15 min" autocomplete="off">
+      </div>
+      <p class="hint">Reason is shown on the board. Everyone waiting is notified.</p>
+      <div class="alert alert-error" id="pauseAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="pauseSubmit">Pause service</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="closeDialog" aria-labelledby="closeTitle">
+    <form class="dialog-body" id="closeForm" novalidate>
+      <div class="dialog-head"><h2 id="closeTitle">Close for the Day</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="muted" id="closeService"></p>
+      <p class="dialog-strong" id="closeCount"></p>
+      <div class="alert alert-error" id="closeAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-danger" id="closeSubmit">Close for the Day</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ticket details: a drawer from the right on desktop, a bottom sheet on phones -->
+  <dialog id="detailsDialog" class="drawer" aria-labelledby="detailsTitle">
+    <div class="dialog-body">
+      <div class="dialog-head"><h2 id="detailsTitle">Ticket Details</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="details-who"><strong id="detailsNumber"></strong> <span id="detailsName"></span></p>
+      <p class="muted" id="detailsService"></p>
+      <p class="muted" id="detailsLoading">Loading...</p>
+      <div id="detailsBody"></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" id="detailsEdit">Edit</button>
+        <button type="button" class="cf-btn cf-btn-danger" id="detailsDelete">Delete</button>
+      </div>
+    </div>
+  </dialog>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page not found - ClinicFlow</title>
+  <link rel="stylesheet" href="/error/error.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/error/error.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span>ClinicFlow</span></a>
+
+    <div class="theme-switch" role="group" aria-label="Color theme">
+      <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+      <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+    </div>
+  </header>
+
+  <!-- The wording below is replaced by error.js to match the error:
+       /error/error.html?code=403 (access denied), ?code=500 (something went wrong), anything else is 404. -->
+  <main class="page">
+    <h1 id="errorTitle">404 Not Found</h1>
+    <p class="message" id="errorMessage">We couldn't find the page you were looking for.</p>
+
+    <div class="buttons">
+      <a href="/" class="cf-btn cf-btn-primary">Back to home</a>
+      <button type="button" class="cf-btn cf-btn-secondary" id="retryButton" hidden>Try again</button>
+    </div>
+  </main>
+
+</body>
+</html>

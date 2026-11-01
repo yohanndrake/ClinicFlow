@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Services - ClinicFlow</title>
+  <link rel="stylesheet" href="/admin/services.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/admin/services.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Admin console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Administrator</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side-nav" aria-label="Admin pages">
+      <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
+      <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
+      <a href="/admin/services.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Services</span></a>
+      <a href="/admin/users.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Users</span></a>
+      <a href="/admin/records.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+      <a href="/admin/settings.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Settings</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Services</h1>
+
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+      <form class="cf-card toolbar" id="toolbar" aria-label="Search services">
+        <div class="filter">
+          <label class="cf-label" for="search">Search</label>
+          <input class="cf-input" type="search" id="search" placeholder="Name or prefix" autocomplete="off">
+        </div>
+        <div class="actions">
+          <button type="button" class="cf-btn cf-btn-secondary" id="addService">Add Service</button>
+        </div>
+      </form>
+
+      <p class="muted" id="loading">Loading services...</p>
+
+      <div class="table-wrap">
+        <table class="grid-table" id="table" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Service</th><th scope="col">Prefix</th><th scope="col">Avg service time</th>
+              <th scope="col">Hours</th><th scope="col">Daily limit</th><th scope="col">Status</th>
+              <th scope="col">Staff count</th><th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="cf-card empty-card" id="empty" hidden><h2>No services found</h2><p class="muted">Add a service to start a queue.</p></div>
+
+      <p class="hint">Services are never hard-deleted: a service that has history is deactivated instead, and can be activated again.</p>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="serviceDialog" class="wide" aria-labelledby="serviceTitle">
+    <form class="dialog-body" id="serviceForm" novalidate>
+      <div class="dialog-head"><h2 id="serviceTitle">Add Service</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="cf-label" for="fName">Name</label>
+          <input class="cf-input" id="fName" maxlength="100" autocomplete="off">
+          <p class="cf-error" id="fNameError" hidden></p>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="fPrefix">Prefix code</label>
+          <input class="cf-input" id="fPrefix" maxlength="3" autocomplete="off" aria-describedby="fPrefixHint fPrefixError">
+          <p class="hint" id="fPrefixHint">1 to 3 letters, unique</p>
+          <p class="cf-error" id="fPrefixError" hidden></p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="cf-label" for="fDescription">Description</label>
+        <textarea class="cf-input" id="fDescription" rows="2" maxlength="255"></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="cf-label" for="fMinutes">Default average service time (minutes)</label>
+          <input class="cf-input" id="fMinutes" type="number" min="1" step="1" inputmode="numeric">
+          <p class="cf-error" id="fMinutesError" hidden></p>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="fLimit">Daily ticket limit</label>
+          <input class="cf-input" id="fLimit" type="number" min="1" step="1" inputmode="numeric" placeholder="No limit">
+          <p class="cf-error" id="fLimitError" hidden></p>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="cf-label" for="fOpen">Opening time</label>
+          <input class="cf-input" id="fOpen" type="time">
+          <p class="cf-error" id="fOpenError" hidden></p>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="fClose">Closing time</label>
+          <input class="cf-input" id="fClose" type="time">
+          <p class="cf-error" id="fCloseError" hidden></p>
+        </div>
+      </div>
+
+      <label class="check-row"><input type="checkbox" id="fActive" checked> Active</label>
+
+      <fieldset class="staff-fieldset">
+        <legend class="cf-label">Assigned staff</legend>
+        <div class="picker" id="staffPicker"></div>
+        <p class="hint">Tick the staff who handle this service and give each one a counter or room name.</p>
+      </fieldset>
+
+      <div class="alert alert-error" id="formAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-primary" id="saveButton">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <form class="dialog-body" id="confirmForm">
+      <div class="dialog-head"><h2 id="confirmTitle">Deactivate service</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="dialog-strong" id="confirmText"></p>
+      <p class="muted">Patients will not be able to take new numbers for it. Existing tickets and history stay.</p>
+      <div class="alert alert-error" id="confirmAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-danger" id="confirmButton">Deactivate</button>
+      </div>
+    </form>
+  </dialog>
+
+</body>
+</html>

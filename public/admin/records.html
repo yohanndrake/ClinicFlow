@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queue Records - ClinicFlow</title>
+  <link rel="stylesheet" href="/admin/records.css">
+  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
+  <script src="/admin/records.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+    <span class="console-label">Admin console</span>
+
+    <div class="header-tools">
+      <span class="clock" id="clock"></span>
+
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-set="light" aria-label="Light mode" title="Light mode">&#9728;</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
+      </div>
+
+      <div class="user-menu">
+        <button type="button" class="user-button" id="userButton" aria-expanded="false" aria-controls="userMenu" aria-haspopup="true">
+          <span class="avatar" id="headerInitials" aria-hidden="true"></span>
+          <span class="user-text"><span class="user-name" id="headerName"></span><span class="user-role">Administrator</span></span>
+        </button>
+        <div class="user-dropdown" id="userMenu" hidden>
+          <a href="/profile/profile.html">Edit Profile</a>
+          <a href="/change-password/change-password.html">Change Password</a>
+          <button type="button" id="logoutButton">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side-nav" aria-label="Admin pages">
+      <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
+      <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
+      <a href="/admin/services.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Services</span></a>
+      <a href="/admin/users.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Users</span></a>
+      <a href="/admin/records.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+      <a href="/admin/settings.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Settings</span></a>
+    </nav>
+
+    <main class="page">
+      <h1>Queue Records</h1>
+
+      <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
+      <form class="cf-card filters" id="filters" aria-label="Filter records">
+        <div class="filter">
+          <label class="cf-label" for="from">From</label>
+          <input class="cf-input" type="date" id="from">
+        </div>
+        <div class="filter">
+          <label class="cf-label" for="to">To</label>
+          <input class="cf-input" type="date" id="to">
+        </div>
+        <div class="filter">
+          <label class="cf-label" for="status">Status</label>
+          <select class="cf-input" id="status">
+            <option value="">All statuses</option>
+            <option value="waiting">Waiting</option>
+            <option value="serving">Serving</option>
+            <option value="completed">Completed</option>
+            <option value="skipped">Skipped</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="filter" id="serviceFilter" hidden>
+          <label class="cf-label" for="service">Service</label>
+          <select class="cf-input" id="service"><option value="">All services</option></select>
+        </div>
+        <div class="filter filter-wide">
+          <label class="cf-label" for="search">Search</label>
+          <input class="cf-input" type="search" id="search" placeholder="Name or number" autocomplete="off">
+        </div>
+        <p class="cf-error filter-wide" id="rangeError" hidden></p>
+      </form>
+
+      <div class="bar">
+        <label class="check-row"><input type="checkbox" id="showDeleted"> Show deleted</label>
+        <a class="cf-btn cf-btn-secondary" id="exportLink" href="#" download>Export CSV</a>
+      </div>
+
+      <section class="results" aria-label="Records" aria-live="polite">
+        <p class="muted" id="loading">Loading records...</p>
+
+        <div class="table-wrap">
+          <table class="grid-table" id="table" hidden>
+            <thead>
+              <tr>
+                <th scope="col">Number</th><th scope="col">Date</th><th scope="col">Name</th>
+                <th scope="col">Service</th><th scope="col">Status</th><th scope="col">Wait time</th>
+                <th scope="col">Service time</th><th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <button type="button" class="cf-btn cf-btn-secondary load-more" id="loadMore" hidden>Load more</button>
+
+        <div class="pager" id="pager" hidden>
+          <button type="button" class="cf-btn cf-btn-secondary" id="prevButton">Previous</button>
+          <span class="muted" id="pageInfo"></span>
+          <button type="button" class="cf-btn cf-btn-secondary" id="nextButton">Next</button>
+        </div>
+
+        <div class="cf-card empty-card" id="empty" hidden>
+          <h2>No records found</h2>
+          <p class="muted">Try a wider date range or a different status.</p>
+        </div>
+      </section>
+
+      <p class="hint">Select a ticket number to see its details. Deleted tickets are hidden until you turn on Show deleted; they can be restored.</p>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Ticket details and edit: a drawer from the right on desktop, a bottom sheet on phones -->
+  <dialog id="detailsDialog" class="drawer" aria-labelledby="detailsTitle">
+    <div class="dialog-body">
+      <div class="dialog-head"><h2 id="detailsTitle">Ticket Details</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="details-who"><strong id="detailsNumber"></strong> <span id="detailsName"></span></p>
+      <p class="muted" id="detailsService"></p>
+      <p class="muted" id="detailsLoading">Loading...</p>
+      <div id="detailsBody"></div>
+
+      <form class="edit-box" id="editForm" hidden novalidate>
+        <h3>Edit ticket</h3>
+        <div class="field">
+          <label class="cf-label" for="eStatus">Status</label>
+          <select class="cf-input" id="eStatus">
+            <option value="waiting">Waiting</option>
+            <option value="serving">Serving</option>
+            <option value="completed">Completed</option>
+            <option value="skipped">Skipped</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="field" id="eNameField" hidden>
+          <label class="cf-label" for="eName">Walk-in name</label>
+          <input class="cf-input" id="eName" maxlength="100" autocomplete="off">
+          <p class="cf-error" id="eNameError" hidden></p>
+        </div>
+        <div class="field">
+          <label class="cf-label" for="eNote">Note</label>
+          <input class="cf-input" id="eNote" maxlength="100" autocomplete="off">
+        </div>
+        <label class="check-row"><input type="checkbox" id="ePriority"> Priority</label>
+        <div class="field">
+          <label class="cf-label" for="eReason">Reason for the change (optional)</label>
+          <input class="cf-input" id="eReason" maxlength="100" autocomplete="off">
+        </div>
+        <div class="alert alert-error" id="editAlert" role="alert" hidden></div>
+        <button type="submit" class="cf-btn cf-btn-primary" id="editSave">Save changes</button>
+      </form>
+
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-danger" id="deleteButton" hidden>Delete</button>
+        <button type="button" class="cf-btn cf-btn-primary" id="restoreButton" hidden>Restore</button>
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Delete needs a reason, which is saved in the ticket's history -->
+  <dialog id="deleteDialog" aria-labelledby="deleteTitle">
+    <form class="dialog-body" id="deleteForm" novalidate>
+      <div class="dialog-head"><h2 id="deleteTitle">Delete ticket</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>
+      <p class="dialog-strong" id="deleteText"></p>
+      <p class="muted">The ticket is hidden from the queue, not erased. You can restore it later.</p>
+      <div class="field">
+        <label class="cf-label" for="dReason">Reason</label>
+        <input class="cf-input" id="dReason" maxlength="100" autocomplete="off">
+        <p class="cf-error" id="dReasonError" hidden></p>
+      </div>
+      <div class="alert alert-error" id="deleteAlert" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" class="cf-btn cf-btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="cf-btn cf-btn-danger" id="deleteConfirm">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+</body>
+</html>
