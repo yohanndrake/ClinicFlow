@@ -1,0 +1,398 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1793345670.2955554,
+    "seen": 1793346163.8306198,
+    "ast_hash": "3ac995fbf93552a991ecab9b63f776aa",
+    "semantic_hash": "3ac995fbf93552a991ecab9b63f776aa"
+  },
+  "database/schema.sql": {
+    "mtime": 1793097281.1881592,
+    "seen": 1793346163.8306289,
+    "ast_hash": "8de414210bacc0b54551a78d78ed617c",
+    "semantic_hash": "8de414210bacc0b54551a78d78ed617c"
+  },
+  "database/seed.sql": {
+    "mtime": 1793097276.3016007,
+    "seen": 1793346163.830633,
+    "ast_hash": "e9d85c20614e74ad254da0e8dd5ddd0e",
+    "semantic_hash": "e9d85c20614e74ad254da0e8dd5ddd0e"
+  },
+  "public/app.js": {
+    "mtime": 1793083849.2154827,
+    "seen": 1793346163.8306355,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "server/db.js": {
+    "mtime": 1793083849.1380813,
+    "seen": 1793346163.830638,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "server/server.js": {
+    "mtime": 1793083849.1517944,
+    "seen": 1793346163.8306398,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1793345670.2797136,
+    "seen": 1793346163.8306422,
+    "ast_hash": "9b31786b637be3c13978bec4c2330752",
+    "semantic_hash": "9b31786b637be3c13978bec4c2330752"
+  },
+  "CLAUDE.md": {
+    "mtime": 1793345670.2955554,
+    "seen": 1793346163.8306441,
+    "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
+    "semantic_hash": "67d88e9d0760c3ba54c75dfd9551c1c5"
+  },
+  "docs/ClinicFlow Wireframes/ACC-01 Edit Profile.png": {
+    "mtime": 1793076908.210553,
+    "seen": 1793346163.8306463,
+    "ast_hash": "1932d0504e2ae69a366a2d9b66f6db55",
+    "semantic_hash": "1932d0504e2ae69a366a2d9b66f6db55"
+  },
+  "docs/ClinicFlow Wireframes/ACC-04 Notifications.png": {
+    "mtime": 1793076908.2050092,
+    "seen": 1793346163.8306484,
+    "ast_hash": "cdd1127ba810d2105e27100c72854ed1",
+    "semantic_hash": "cdd1127ba810d2105e27100c72854ed1"
+  },
+  "docs/ClinicFlow Wireframes/ADM-01 Dashboard.png": {
+    "mtime": 1793076908.1768389,
+    "seen": 1793346163.8306506,
+    "ast_hash": "f2243744249afcd01d90986a52d1e53a",
+    "semantic_hash": "f2243744249afcd01d90986a52d1e53a"
+  },
+  "docs/ClinicFlow Wireframes/ADM-02 Reports.png": {
+    "mtime": 1793076908.175796,
+    "seen": 1793346163.8306527,
+    "ast_hash": "1613af0a60128942972c33d8fd07deed",
+    "semantic_hash": "1613af0a60128942972c33d8fd07deed"
+  },
+  "docs/ClinicFlow Wireframes/ADM-03 Service Modal.png": {
+    "mtime": 1793076908.1724846,
+    "seen": 1793346163.8306546,
+    "ast_hash": "ae771bce83be66aa042c28b5dc084632",
+    "semantic_hash": "ae771bce83be66aa042c28b5dc084632"
+  },
+  "docs/ClinicFlow Wireframes/ADM-03 Services.png": {
+    "mtime": 1793076908.1735919,
+    "seen": 1793346163.8306568,
+    "ast_hash": "d40eb102a6db84c8d5f1fc7dfc1e24d3",
+    "semantic_hash": "d40eb102a6db84c8d5f1fc7dfc1e24d3"
+  },
+  "docs/ClinicFlow Wireframes/ADM-04 User Modals.png": {
+    "mtime": 1793076908.1692958,
+    "seen": 1793346163.830659,
+    "ast_hash": "c4c5e6d0acc5da859863dada40af2387",
+    "semantic_hash": "c4c5e6d0acc5da859863dada40af2387"
+  },
+  "docs/ClinicFlow Wireframes/ADM-04 Users.png": {
+    "mtime": 1793076908.1714792,
+    "seen": 1793346163.8306606,
+    "ast_hash": "84a1794a04cc00acdbf708f1817349f1",
+    "semantic_hash": "84a1794a04cc00acdbf708f1817349f1"
+  },
+  "docs/ClinicFlow Wireframes/ADM-05 Queue Records.png": {
+    "mtime": 1793076908.1682067,
+    "seen": 1793346163.8306627,
+    "ast_hash": "acf8bdd816516ddccbbb9d626c5015fc",
+    "semantic_hash": "acf8bdd816516ddccbbb9d626c5015fc"
+  },
+  "docs/ClinicFlow Wireframes/ADM-06 Clinic Settings.png": {
+    "mtime": 1793076908.1658926,
+    "seen": 1793346163.8306649,
+    "ast_hash": "8a79ee51a4b7bf53bc0e8039f73b28d6",
+    "semantic_hash": "8a79ee51a4b7bf53bc0e8039f73b28d6"
+  },
+  "docs/ClinicFlow Wireframes/Bottom sheet notes.png": {
+    "mtime": 1793076908.110131,
+    "seen": 1793346163.830667,
+    "ast_hash": "70fae7947c1b6ac5dbbe3872f0c18410",
+    "semantic_hash": "70fae7947c1b6ac5dbbe3872f0c18410"
+  },
+  "docs/ClinicFlow Wireframes/Called ticket notes.png": {
+    "mtime": 1793076908.120716,
+    "seen": 1793346163.8306692,
+    "ast_hash": "ad4d8187a781df57fbad1c10673e19de",
+    "semantic_hash": "ad4d8187a781df57fbad1c10673e19de"
+  },
+  "docs/ClinicFlow Wireframes/Change password notes.png": {
+    "mtime": 1793076908.1505008,
+    "seen": 1793346163.830671,
+    "ast_hash": "b3cc64b52abe756b9361ee12c5154610",
+    "semantic_hash": "b3cc64b52abe756b9361ee12c5154610"
+  },
+  "docs/ClinicFlow Wireframes/End state notes.png": {
+    "mtime": 1793076908.1164448,
+    "seen": 1793346163.8306732,
+    "ast_hash": "5c7bd43a6eb6b5cacb0f750390cc6c75",
+    "semantic_hash": "5c7bd43a6eb6b5cacb0f750390cc6c75"
+  },
+  "docs/ClinicFlow Wireframes/Landing notes.png": {
+    "mtime": 1793076908.1626916,
+    "seen": 1793346163.8306756,
+    "ast_hash": "8dba53c414a29292007fd7031f11570c",
+    "semantic_hash": "8dba53c414a29292007fd7031f11570c"
+  },
+  "docs/ClinicFlow Wireframes/Login notes.png": {
+    "mtime": 1793076908.1596916,
+    "seen": 1793346163.8306775,
+    "ast_hash": "69d79ff723095fbca9a3210394c75b22",
+    "semantic_hash": "69d79ff723095fbca9a3210394c75b22"
+  },
+  "docs/ClinicFlow Wireframes/M-ACC-01 Edit Profile.png": {
+    "mtime": 1793076908.1529374,
+    "seen": 1793346163.8306797,
+    "ast_hash": "6ee0b276293f6167a05044a38d5a50dd",
+    "semantic_hash": "6ee0b276293f6167a05044a38d5a50dd"
+  },
+  "docs/ClinicFlow Wireframes/M-ACC-04 Notifications.png": {
+    "mtime": 1793076908.1458812,
+    "seen": 1793346163.8306813,
+    "ast_hash": "e8d4f2ea288078824b13ca63a900d2a8",
+    "semantic_hash": "e8d4f2ea288078824b13ca63a900d2a8"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT Bottom Sheets.png": {
+    "mtime": 1793076908.111139,
+    "seen": 1793346163.8306837,
+    "ast_hash": "4a8beb683b9d60b75ee8f0c592cb8083",
+    "semantic_hash": "4a8beb683b9d60b75ee8f0c592cb8083"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-01 Patient Home.png": {
+    "mtime": 1793076908.1423616,
+    "seen": 1793346163.8306854,
+    "ast_hash": "cc2a36ffb4a099f15bfdff584d74f4fa",
+    "semantic_hash": "cc2a36ffb4a099f15bfdff584d74f4fa"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-02 Take a Number.png": {
+    "mtime": 1793076908.1381433,
+    "seen": 1793346163.8306875,
+    "ast_hash": "ce4cedec1c27601d9583e57ce76c0ed2",
+    "semantic_hash": "ce4cedec1c27601d9583e57ce76c0ed2"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-02 Ticket Issued.png": {
+    "mtime": 1793076908.1337905,
+    "seen": 1793346163.8306892,
+    "ast_hash": "197a82b8700218fa033e3fb50da1c1c5",
+    "semantic_hash": "197a82b8700218fa033e3fb50da1c1c5"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-03 End States.png": {
+    "mtime": 1793076908.1186225,
+    "seen": 1793346163.8306913,
+    "ast_hash": "b363d1cfd60dea358a3fc9bab2ab094c",
+    "semantic_hash": "b363d1cfd60dea358a3fc9bab2ab094c"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-03 My Ticket - Called.png": {
+    "mtime": 1793076908.1228735,
+    "seen": 1793346163.830693,
+    "ast_hash": "2da9f5ee6153a3d1bab9ba3d9cd6e8f3",
+    "semantic_hash": "2da9f5ee6153a3d1bab9ba3d9cd6e8f3"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-03 My Ticket - Near.png": {
+    "mtime": 1793076908.1270974,
+    "seen": 1793346163.8306952,
+    "ast_hash": "26a2ace69d2bbad49c884bf0e1144e5f",
+    "semantic_hash": "26a2ace69d2bbad49c884bf0e1144e5f"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-03 My Ticket - Waiting.png": {
+    "mtime": 1793076908.1305337,
+    "seen": 1793346163.8306973,
+    "ast_hash": "fc197abc134f69ebf8c1cb064efd7689",
+    "semantic_hash": "fc197abc134f69ebf8c1cb064efd7689"
+  },
+  "docs/ClinicFlow Wireframes/M-PAT-04 Visit History.png": {
+    "mtime": 1793076908.11544,
+    "seen": 1793346163.830699,
+    "ast_hash": "e16cd988f399359fac76821eb85096b2",
+    "semantic_hash": "e16cd988f399359fac76821eb85096b2"
+  },
+  "docs/ClinicFlow Wireframes/M-PUB-01 Landing.png": {
+    "mtime": 1793076908.1638882,
+    "seen": 1793346163.8307009,
+    "ast_hash": "3fd57ea05b9d22b54c78cc9a534d6b05",
+    "semantic_hash": "3fd57ea05b9d22b54c78cc9a534d6b05"
+  },
+  "docs/ClinicFlow Wireframes/M-PUB-02 Login.png": {
+    "mtime": 1793076908.1606915,
+    "seen": 1793346163.8307028,
+    "ast_hash": "3032fb6a6eed7f5e14368bb0bd0c90ea",
+    "semantic_hash": "3032fb6a6eed7f5e14368bb0bd0c90ea"
+  },
+  "docs/ClinicFlow Wireframes/M-PUB-03 Register.png": {
+    "mtime": 1793076908.157362,
+    "seen": 1793346163.8307047,
+    "ast_hash": "a1753a2c8582da9435e61e6f2b6d6617",
+    "semantic_hash": "a1753a2c8582da9435e61e6f2b6d6617"
+  },
+  "docs/ClinicFlow Wireframes/Near ticket notes.png": {
+    "mtime": 1793076908.1248972,
+    "seen": 1793346163.8307066,
+    "ast_hash": "f278b88dc0e45d6122f91f8b87df9d8e",
+    "semantic_hash": "f278b88dc0e45d6122f91f8b87df9d8e"
+  },
+  "docs/ClinicFlow Wireframes/Notifications notes.png": {
+    "mtime": 1793076908.1448796,
+    "seen": 1793346163.8307085,
+    "ast_hash": "a3ed95068daac8df7f73668c210d7f3a",
+    "semantic_hash": "a3ed95068daac8df7f73668c210d7f3a"
+  },
+  "docs/ClinicFlow Wireframes/PAT Modals.png": {
+    "mtime": 1793076908.1879098,
+    "seen": 1793346163.8307104,
+    "ast_hash": "9959a46825e0b58694807feec40c75f5",
+    "semantic_hash": "9959a46825e0b58694807feec40c75f5"
+  },
+  "docs/ClinicFlow Wireframes/PAT-01 Patient Home.png": {
+    "mtime": 1793076908.203008,
+    "seen": 1793346163.8307123,
+    "ast_hash": "a8e7b333206375908ab8c9c8ef0444aa",
+    "semantic_hash": "a8e7b333206375908ab8c9c8ef0444aa"
+  },
+  "docs/ClinicFlow Wireframes/PAT-02 Take a Queue Number.png": {
+    "mtime": 1793076908.2006724,
+    "seen": 1793346163.8307147,
+    "ast_hash": "272a7fdedc1dd747440fafc82254cb3f",
+    "semantic_hash": "272a7fdedc1dd747440fafc82254cb3f"
+  },
+  "docs/ClinicFlow Wireframes/PAT-02 Ticket Issued.png": {
+    "mtime": 1793076908.1986585,
+    "seen": 1793346163.8307178,
+    "ast_hash": "74059162d72639df4424c8a09bce18a2",
+    "semantic_hash": "74059162d72639df4424c8a09bce18a2"
+  },
+  "docs/ClinicFlow Wireframes/PAT-03 End States.png": {
+    "mtime": 1793076908.1901357,
+    "seen": 1793346163.8307197,
+    "ast_hash": "069761a4f51b427badd9abf4b1e2c080",
+    "semantic_hash": "069761a4f51b427badd9abf4b1e2c080"
+  },
+  "docs/ClinicFlow Wireframes/PAT-03 My Ticket - Called.png": {
+    "mtime": 1793076908.192175,
+    "seen": 1793346163.8307216,
+    "ast_hash": "567e6f5c48b8b584af460c047b97986d",
+    "semantic_hash": "567e6f5c48b8b584af460c047b97986d"
+  },
+  "docs/ClinicFlow Wireframes/PAT-03 My Ticket - Near.png": {
+    "mtime": 1793076908.193277,
+    "seen": 1793346163.8307235,
+    "ast_hash": "99aca4808174dc12c8094d9991ff72a4",
+    "semantic_hash": "99aca4808174dc12c8094d9991ff72a4"
+  },
+  "docs/ClinicFlow Wireframes/PAT-03 My Ticket - Waiting.png": {
+    "mtime": 1793076908.1954784,
+    "seen": 1793346163.8307254,
+    "ast_hash": "8a87abe87d3ea6b3b1a683ad050674a8",
+    "semantic_hash": "8a87abe87d3ea6b3b1a683ad050674a8"
+  },
+  "docs/ClinicFlow Wireframes/PAT-04 Visit History.png": {
+    "mtime": 1793076908.1975155,
+    "seen": 1793346163.8307273,
+    "ast_hash": "f3d74c18e9c5efd912d6e75ff7a763b8",
+    "semantic_hash": "f3d74c18e9c5efd912d6e75ff7a763b8"
+  },
+  "docs/ClinicFlow Wireframes/PUB-01 Landing.png": {
+    "mtime": 1793076908.2204053,
+    "seen": 1793346163.8307295,
+    "ast_hash": "0d82d2369c236f4457ed2fd792198bde",
+    "semantic_hash": "0d82d2369c236f4457ed2fd792198bde"
+  },
+  "docs/ClinicFlow Wireframes/PUB-02 Login.png": {
+    "mtime": 1793076908.2179615,
+    "seen": 1793346163.8307316,
+    "ast_hash": "307644f6ea1eb38b63ed525154a032bc",
+    "semantic_hash": "307644f6ea1eb38b63ed525154a032bc"
+  },
+  "docs/ClinicFlow Wireframes/PUB-03 Register.png": {
+    "mtime": 1793076908.216959,
+    "seen": 1793346163.8307333,
+    "ast_hash": "d80b7d418ffd62c2fc2460c38b121309",
+    "semantic_hash": "d80b7d418ffd62c2fc2460c38b121309"
+  },
+  "docs/ClinicFlow Wireframes/PUB-04 Board States.png": {
+    "mtime": 1793076908.21356,
+    "seen": 1793346163.8307352,
+    "ast_hash": "1eb6c054b3cd1fd91a0f19b9570a3cf6",
+    "semantic_hash": "1eb6c054b3cd1fd91a0f19b9570a3cf6"
+  },
+  "docs/ClinicFlow Wireframes/PUB-04 Now Serving Board.png": {
+    "mtime": 1793076908.2145605,
+    "seen": 1793346163.830737,
+    "ast_hash": "b5caf8d28ccbe9a9348e55464192b230",
+    "semantic_hash": "b5caf8d28ccbe9a9348e55464192b230"
+  },
+  "docs/ClinicFlow Wireframes/PUB-05 Error Pages.png": {
+    "mtime": 1793076908.2115588,
+    "seen": 1793346163.8307393,
+    "ast_hash": "a74ef261cc1edd2286ec710a25eb1d6b",
+    "semantic_hash": "a74ef261cc1edd2286ec710a25eb1d6b"
+  },
+  "docs/ClinicFlow Wireframes/Patient home notes.png": {
+    "mtime": 1793076908.1403575,
+    "seen": 1793346163.830741,
+    "ast_hash": "1b7c5f992c25cd036273b36628ecbf43",
+    "semantic_hash": "1b7c5f992c25cd036273b36628ecbf43"
+  },
+  "docs/ClinicFlow Wireframes/Register notes.png": {
+    "mtime": 1793076908.1549487,
+    "seen": 1793346163.8307428,
+    "ast_hash": "cea946056d3cb705bdf5c12d3b177152",
+    "semantic_hash": "cea946056d3cb705bdf5c12d3b177152"
+  },
+  "docs/ClinicFlow Wireframes/STF Modals 1.png": {
+    "mtime": 1793076908.1798708,
+    "seen": 1793346163.8307447,
+    "ast_hash": "ea36bfa6e411236733a6dc2ab5e710bb",
+    "semantic_hash": "ea36bfa6e411236733a6dc2ab5e710bb"
+  },
+  "docs/ClinicFlow Wireframes/STF Modals 2.png": {
+    "mtime": 1793076908.1788628,
+    "seen": 1793346163.830747,
+    "ast_hash": "96e1c87733d3a719d689d628e86d62d1",
+    "semantic_hash": "96e1c87733d3a719d689d628e86d62d1"
+  },
+  "docs/ClinicFlow Wireframes/STF-01 Console States.png": {
+    "mtime": 1793076908.1844227,
+    "seen": 1793346163.830749,
+    "ast_hash": "eba56497523d4be0fe766fd77070b69a",
+    "semantic_hash": "eba56497523d4be0fe766fd77070b69a"
+  },
+  "docs/ClinicFlow Wireframes/STF-01 Queue Console.png": {
+    "mtime": 1793076908.186907,
+    "seen": 1793346163.830751,
+    "ast_hash": "35335600ee5d4a59680abac13a8f9f06",
+    "semantic_hash": "35335600ee5d4a59680abac13a8f9f06"
+  },
+  "docs/ClinicFlow Wireframes/STF-02 Queue Records.png": {
+    "mtime": 1793076908.183214,
+    "seen": 1793346163.830753,
+    "ast_hash": "11ea620c33cd0988c5d26bd79abdb9dc",
+    "semantic_hash": "11ea620c33cd0988c5d26bd79abdb9dc"
+  },
+  "docs/ClinicFlow Wireframes/Take a number notes.png": {
+    "mtime": 1793076908.136032,
+    "seen": 1793346163.8307548,
+    "ast_hash": "98b5066b0037de1a353b1ed97127f356",
+    "semantic_hash": "98b5066b0037de1a353b1ed97127f356"
+  },
+  "docs/ClinicFlow Wireframes/Ticket issued notes.png": {
+    "mtime": 1793076908.1315358,
+    "seen": 1793346163.8307571,
+    "ast_hash": "f278b88dc0e45d6122f91f8b87df9d8e",
+    "semantic_hash": "f278b88dc0e45d6122f91f8b87df9d8e"
+  },
+  "docs/ClinicFlow Wireframes/Visit history notes.png": {
+    "mtime": 1793076908.1144333,
+    "seen": 1793346163.8307588,
+    "ast_hash": "f2d1dd58933a72c7536ea505ac344dd5",
+    "semantic_hash": "f2d1dd58933a72c7536ea505ac344dd5"
+  },
+  "docs/ClinicFlow Wireframes/Waiting ticket notes.png": {
+    "mtime": 1793076908.1283758,
+    "seen": 1793346163.830761,
+    "ast_hash": "b79f4d4f4ce3f5f9e41cc525d5b39955",
+    "semantic_hash": "b79f4d4f4ce3f5f9e41cc525d5b39955"
+  }
+}
