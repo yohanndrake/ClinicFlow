@@ -1,93 +1,14 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//admin/dashboard.js - dashboard script, stat tiles, live services and charts of patients and average wait, refreshes every 15 seconds
 document.addEventListener('DOMContentLoaded', function () {
   var REFRESH_SECONDS = 15;
 
-  var userButton = document.getElementById('userButton');
   var userMenu = document.getElementById('userMenu');
 
-  var timeZone = undefined;   // the clinic's time zone, known after the board answers
-  var range = 'today';        // 'today', '7' or '30'
-  var data = null;            // the latest dashboard answer
+  var timeZone = undefined;
+  var range = 'today';
+  var data = null;
   var ticketsChart = null;
   var waitChart = null;
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  /* Theme buttons (the charts are redrawn so their colors follow the theme) */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-      if (data) drawCharts();
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  function capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
-  // "Clinic Admin" -> "CA"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // "08:00:00" -> "8:00 AM"
-  function formatTime(value) {
-    var parts = String(value).split(':');
-    var hour = Number(parts[0]);
-    return (hour % 12 || 12) + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
-  }
-
-  // "2026-10-23" -> "Oct 23"
-  function shortDay(isoDate) {
-    var parts = String(isoDate).split('-');
-    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[Number(parts[1]) - 1] + ' ' + Number(parts[2]);
-  }
 
   function minutesText(minutes) {
     return minutes === null || minutes === undefined ? '—' : Math.round(minutes) + ' min';
@@ -100,23 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function cssColor(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  }
-
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
   document.addEventListener('click', function (event) {
     if (!userMenu.contains(event.target)) closeMenu();
   });
@@ -126,29 +30,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('logoutButton').addEventListener('click', function () {
     fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
+      .catch(function () { })
       .then(function () { window.location.href = '/login/login.html'; });
   });
-
-  /* ---------- Talking to the server ---------- */
-
-  // Gets JSON. Logged-out people go to the login page, people without access to the error page.
-  function getJson(url) {
-    return fetch(url, { cache: 'no-store' }).then(function (res) {
-      if (res.status === 401) {
-        window.location.replace('/login/login.html');
-        throw new Error('not logged in');
-      }
-      if (res.status === 403) {
-        window.location.replace('/error/error.html?code=403');
-        throw new Error('not allowed');
-      }
-      if (!res.ok) throw new Error('bad status');
-      return res.json();
-    });
-  }
-
-  /* ---------- Numbers and live overview ---------- */
 
   function fact(label, value, className) {
     var box = el('div', 'fact' + (className ? ' ' + className : ''));
@@ -187,12 +71,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!data.services.length) list.appendChild(el('p', 'muted', 'No active services.'));
   }
 
-  /* ---------- Charts ---------- */
-
   function drawCharts() {
     var labels = data.daily.map(function (d) { return shortDay(d.date); });
     var patients = data.daily.map(function (d) { return d.patients; });
-    // Days with nobody called have no average: leave a gap in the line instead of a fake zero
     var waits = data.daily.map(function (d) { return d.avg_wait_minutes; });
 
     var text = cssColor('--cf-text-muted');
@@ -232,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function () {
       options: waitOptions
     });
 
-    // The same numbers as a table, for screen readers and anyone who prefers it
     var rows = byId('tableRows');
     rows.textContent = '';
     data.daily.forEach(function (d) {
@@ -243,8 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.appendChild(tr);
     });
   }
-
-  /* ---------- Loading ---------- */
 
   function load() {
     return getJson('/api/admin/dashboard?range=' + range)
@@ -279,8 +157,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* ---------- Start ---------- */
-
   getJson('/api/auth/me')
     .then(function (result) {
       var user = result.user;
@@ -301,9 +177,10 @@ document.addEventListener('DOMContentLoaded', function () {
             timeZone = board.time_zone;
           }
         })
-        .catch(function () { /* the clock just uses this device's time zone */ })
+        .catch(function () { })
         .then(function () {
           updateClock();
+
           setInterval(updateClock, 30 * 1000);
           return load();
         })
@@ -311,5 +188,5 @@ document.addEventListener('DOMContentLoaded', function () {
           setInterval(load, REFRESH_SECONDS * 1000);
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });

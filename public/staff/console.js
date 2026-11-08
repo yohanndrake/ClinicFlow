@@ -1,93 +1,21 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//staff/console.js - queue console script, call next, complete, skip, walk ins, edit or delete tickets, pause or close the service
 document.addEventListener('DOMContentLoaded', function () {
-  var REFRESH_SECONDS = 5; // how often the queue is reloaded
+  var REFRESH_SECONDS = 5;
 
-  var userButton = document.getElementById('userButton');
   var userMenu = document.getElementById('userMenu');
 
-  var timeZone = undefined;     // the clinic's time zone, known after the board answers
-  var services = [];            // services this staff member handles
-  var serviceId = null;         // the one being shown
-  var data = null;              // the latest answer from /api/staff/queue
-  var deletedTickets = [];      // only filled when "Show deleted tickets" is ticked
-  var tab = 'waiting';          // which status tab is open
+  var timeZone = undefined;
+  var services = [];
+  var serviceId = null;
+  var data = null;
+  var deletedTickets = [];
+  var tab = 'waiting';
   var showDeleted = false;
-  var loading = false;          // true while a refresh is in flight
-  var failures = 0;             // refreshes that failed in a row
+  var loading = false;
+  var failures = 0;
   var toastTimer = null;
-  var activeTicket = null;      // the ticket a dialog is working on
+  var activeTicket = null;
 
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  function capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
-  // "Nina Ramos" -> "NR"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // "08:00:00" -> "8:00 AM"
-  function formatTime(value) {
-    var parts = String(value).split(':');
-    var hour = Number(parts[0]);
-    return (hour % 12 || 12) + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
-  }
-
-  // A timestamp as "10:24 AM" in the clinic's time zone, or a dash when there is none
   function clockText(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timeZone });
@@ -98,15 +26,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return new Date(iso).toLocaleString('en-US', {
       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: timeZone
     });
-  }
-
-  function minutesText(minutes) {
-    if (minutes === null || minutes === undefined) return '—';
-    return Math.round(minutes) + ' min';
-  }
-
-  function pad(n) {
-    return (n < 10 ? '0' : '') + n;
   }
 
   function updateClock() {
@@ -120,19 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return data && data.service;
   }
 
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
   document.addEventListener('click', function (event) {
     if (!userMenu.contains(event.target)) closeMenu();
   });
@@ -144,13 +50,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('logoutButton').addEventListener('click', function () {
     fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
+      .catch(function () { })
       .then(function () { window.location.href = '/login/login.html'; });
   });
 
-  /* ---------- Talking to the server ---------- */
-
-  // Sends a request and resolves to { status, data }. A logged-out person goes to the login page.
   function send(method, url, body) {
     var options = { method: method, cache: 'no-store' };
     if (body !== undefined) {
@@ -177,20 +80,10 @@ document.addEventListener('DOMContentLoaded', function () {
     toastTimer = setTimeout(function () { box.hidden = true; }, 4500);
   }
 
-  /* ---------- Dialog helpers ---------- */
-
-  function openDialog(id) {
-    var dialog = byId(id);
-    dialog.querySelectorAll('.alert, .cf-error').forEach(function (node) { node.hidden = true; });
-    dialog.querySelectorAll('.is-error').forEach(function (node) { node.classList.remove('is-error'); });
-    dialog.showModal();
-  }
-
   function closeDialog(id) {
     byId(id).close();
   }
 
-  // Every "x", Cancel and Dismiss button carries data-close
   document.querySelectorAll('[data-close]').forEach(function (button) {
     button.addEventListener('click', function () {
       button.closest('dialog').close();
@@ -209,8 +102,6 @@ document.addEventListener('DOMContentLoaded', function () {
     errorBox.hidden = false;
     input.focus();
   }
-
-  /* ---------- Drawing the console ---------- */
 
   var STATUS_NAMES = { waiting: 'Waiting', serving: 'Serving', completed: 'Completed', skipped: 'Skipped', cancelled: 'Cancelled' };
 
@@ -235,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function () {
         : 'Service closed';
     }
 
-    // The pause and close buttons change with the state
     byId('pauseButton').textContent = s.queue_status === 'paused' ? 'Resume Service'
       : s.queue_status === 'closed' ? 'Reopen Service' : 'Pause Service';
     byId('closeButton').hidden = s.queue_status === 'closed';
@@ -268,7 +158,6 @@ document.addEventListener('DOMContentLoaded', function () {
     tickServing();
   }
 
-  // "Called 2 min ago" and the grace countdown change every second
   function tickServing() {
     var t = data && data.current;
     if (!t) return;
@@ -291,13 +180,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var next = data.next_up;
     byId('nextUp').textContent = next ? 'Next up: ' + next.ticket_label : 'No one is waiting';
     byId('callNext').disabled = s.queue_status !== 'open' || !!data.current || !next;
-  }
-
-  function addButton(box, label, className, onClick) {
-    var button = el('button', 'link-button' + (className ? ' ' + className : ''), label);
-    button.type = 'button';
-    button.addEventListener('click', onClick);
-    box.appendChild(button);
   }
 
   function drawRow(t) {
@@ -377,8 +259,6 @@ document.addEventListener('DOMContentLoaded', function () {
     drawTable();
   }
 
-  /* ---------- Loading ---------- */
-
   function loadQueue() {
     if (loading || serviceId === null) return Promise.resolve();
     loading = true;
@@ -401,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
         failures++;
         byId('loading').hidden = true;
         if (data) {
-          // Keep showing the last good data; say that updates have stopped
           if (failures >= 2) byId('connectionAlert').hidden = false;
         } else {
           byId('pageAlert').textContent = "Can't load the queue. " + (err.message === 'bad status' ? '' : err.message);
@@ -411,13 +290,12 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function () { loading = false; });
   }
 
-  // After any change: show the result and reload
   function afterAction(result, successMessage) {
     if (result.status >= 200 && result.status < 300) {
       if (successMessage) toast(successMessage);
+
       return loadQueue().then(function () { return true; });
     }
-    // 409 means someone else changed it first (another counter, the patient...)
     toast(result.data.error || 'Something went wrong. Please try again.', true);
     return loadQueue().then(function () { return false; });
   }
@@ -425,8 +303,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function networkProblem() {
     toast("Can't reach the server. Please try again.", true);
   }
-
-  /* ---------- Call next, complete, re-announce, arrived ---------- */
 
   byId('callNext').addEventListener('click', function () {
     var button = byId('callNext');
@@ -464,8 +340,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ticketAction('restore', t.ticket_id, t.ticket_label + ' restored');
   }
 
-  /* ---------- Skip or Cancel ---------- */
-
   function openStop(t) {
     activeTicket = t;
     byId('stopTicket').textContent = t.ticket_label + (t.display_name ? ' · ' + t.display_name : '');
@@ -492,8 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('stopSkip').addEventListener('click', function () { submitStop('skip', 'skipped'); });
   byId('stopCancel').addEventListener('click', function () { submitStop('cancel', 'cancelled'); });
-
-  /* ---------- Add walk-in ---------- */
 
   byId('addWalkIn').addEventListener('click', function () {
     byId('walkinName').value = '';
@@ -529,14 +401,11 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function () { byId('walkinSubmit').disabled = false; });
   });
 
-  /* ---------- Edit ticket ---------- */
-
   function openEdit(t) {
     activeTicket = t;
     byId('editTicket').textContent = t.ticket_label;
     byId('editNote').value = t.note || '';
     byId('editPriority').checked = !!t.priority;
-    // Only walk-ins have a name that staff can change
     byId('editNameField').hidden = !t.walk_in_name;
     byId('editName').value = t.walk_in_name || '';
     openDialog('editDialog');
@@ -567,8 +436,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function () { byId('editSubmit').disabled = false; });
   });
 
-  /* ---------- Delete ticket ---------- */
-
   function openDelete(t) {
     activeTicket = t;
     byId('deleteTicket').textContent = t.ticket_label + (t.display_name ? ' · ' + t.display_name : '');
@@ -598,8 +465,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function () { byId('deleteSubmit').disabled = false; });
   });
 
-  /* ---------- Pause / resume / close / reopen ---------- */
-
   function setStatus(status, note, dialogId, alertId, buttonId, message) {
     byId(buttonId).disabled = true;
     return send('POST', '/api/staff/service-status', { service_id: serviceId, queue_status: status, status_note: note })
@@ -628,7 +493,6 @@ document.addEventListener('DOMContentLoaded', function () {
       byId('pauseReason').value = '';
       openDialog('pauseDialog');
     } else {
-      // Paused or closed: this button puts the service back to open
       setStatus('open', null, null, null, 'pauseButton', 'Service is open');
     }
   });
@@ -653,23 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setStatus('closed', null, 'closeDialog', 'closeAlert', 'closeSubmit', 'Service closed for the day');
   });
 
-  /* ---------- Ticket details ---------- */
-
   var detailTicket = null;
-
-  function group(title, pairs) {
-    var box = el('div', 'detail-group');
-    if (title) box.appendChild(el('h3', '', title));
-    var list = el('dl', 'detail-rows');
-    pairs.forEach(function (pair) {
-      var row = el('div');
-      row.appendChild(el('dt', '', pair[0]));
-      row.appendChild(el('dd', '', pair[1]));
-      list.appendChild(row);
-    });
-    box.appendChild(list);
-    return box;
-  }
 
   function openDetails(t) {
     detailTicket = null;
@@ -734,8 +582,6 @@ document.addEventListener('DOMContentLoaded', function () {
     openDelete(detailTicket);
   });
 
-  /* ---------- Tabs, search, show deleted, service switcher ---------- */
-
   document.querySelectorAll('[data-tab]').forEach(function (button) {
     button.addEventListener('click', function () {
       tab = button.dataset.tab;
@@ -761,8 +607,6 @@ document.addEventListener('DOMContentLoaded', function () {
     loadQueue();
   });
 
-  /* ---------- Start ---------- */
-
   send('GET', '/api/auth/me')
     .then(function (result) {
       var user = result.data.user;
@@ -784,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
             timeZone = board.time_zone;
           }
         })
-        .catch(function () { /* the clock just uses this device's time zone */ })
+        .catch(function () { })
         .then(function () {
           updateClock();
           return send('GET', '/api/staff/services');
@@ -794,6 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
             window.location.replace('/error/error.html?code=403');
             return;
           }
+
           services = res.data.services || [];
           byId('loading').hidden = true;
           if (!services.length) {
@@ -801,7 +646,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
           }
 
-          // A service switcher only appears when staff handle more than one service
           serviceId = services[0].service_id;
           if (services.length > 1) {
             var select = byId('serviceSelect');
@@ -816,9 +660,10 @@ document.addEventListener('DOMContentLoaded', function () {
           return loadQueue().then(function () {
             setInterval(loadQueue, REFRESH_SECONDS * 1000);
             setInterval(tickServing, 1000);
+
             setInterval(updateClock, 30 * 1000);
           });
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });

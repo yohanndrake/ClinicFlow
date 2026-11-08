@@ -1,38 +1,7 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//staff/records.js - staff records script, read only search of past tickets with filters, paging and details
 document.addEventListener('DOMContentLoaded', function () {
   var PAGE_SIZE = 20;
 
-  var userButton = document.getElementById('userButton');
   var userMenu = document.getElementById('userMenu');
   var rangeSelect = document.getElementById('range');
   var statusSelect = document.getElementById('status');
@@ -41,48 +10,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var rows = document.getElementById('recordRows');
   var loadMore = document.getElementById('loadMore');
 
-  var timeZone = undefined;   // the clinic's time zone, known after the board answers
-  var page = 1;               // the page being shown
-  var pages = 1;              // how many pages there are with the current filters
-  var requestNumber = 0;      // lets us ignore an old answer if the filters changed meanwhile
+  var timeZone = undefined;
+  var page = 1;
+  var pages = 1;
+  var requestNumber = 0;
   var searchTimer = null;
 
   var STATUS_NAMES = { waiting: 'Waiting', serving: 'Serving', completed: 'Completed', skipped: 'Skipped', cancelled: 'Cancelled' };
 
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  function capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
-  // "Nina Ramos" -> "NR"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // "2026-10-23" -> "Fri, Oct 23, 2026"  (already the clinic's day, so no time zone maths)
   function formatDay(isoDate) {
     var parts = String(isoDate).split('-');
     var day = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
@@ -96,12 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function minutesText(minutes) {
-    if (minutes === null || minutes === undefined) return '—';
-    return Math.round(minutes) + ' min';
-  }
-
-  // The clinic's date, N days ago, as YYYY-MM-DD
   function daysAgo(days) {
     var parts = new Intl.DateTimeFormat('en-CA', {
       year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timeZone
@@ -120,19 +49,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
   document.addEventListener('click', function (event) {
     if (!userMenu.contains(event.target)) closeMenu();
   });
@@ -142,13 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('logoutButton').addEventListener('click', function () {
     fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
+      .catch(function () { })
       .then(function () { window.location.href = '/login/login.html'; });
   });
 
-  /* ---------- Talking to the server ---------- */
-
-  // Gets JSON. Logged-out people go to the login page, people without access to the error page.
   function getJson(url) {
     return fetch(url, { cache: 'no-store' }).then(function (res) {
       if (res.status === 401) {
@@ -166,8 +79,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------- Rows ---------- */
-
   function cell(label) {
     var td = el('td');
     td.dataset.label = label;
@@ -177,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function drawRow(t) {
     var row = el('tr');
 
-    // The ticket number opens the details drawer
     var number = cell('Number');
     var link = el('button', 'row-link', t.ticket_label);
     link.type = 'button';
@@ -202,8 +112,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return row;
   }
 
-  /* ---------- Loading a page of records ---------- */
-
   function buildUrl(pageNumber) {
     var query = [
       'page=' + pageNumber,
@@ -217,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return '/api/staff/records?' + query.join('&');
   }
 
-  // append = true adds to the list ("Load more"), otherwise the list is replaced
   function loadPage(pageNumber, append) {
     var mine = ++requestNumber;
     byId('loading').hidden = false;
@@ -225,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     return getJson(buildUrl(pageNumber))
       .then(function (data) {
-        if (mine !== requestNumber) return; // filters changed while waiting
+        if (mine !== requestNumber) return;
         page = data.page;
         pages = data.pages;
 
@@ -261,7 +168,6 @@ document.addEventListener('DOMContentLoaded', function () {
     select.addEventListener('change', function () { loadPage(1, false); });
   });
 
-  // Search waits until typing pauses, so the server is not asked after every letter
   searchInput.addEventListener('input', function () {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(function () { loadPage(1, false); }, 350);
@@ -272,25 +178,9 @@ document.addEventListener('DOMContentLoaded', function () {
   byId('prevButton').addEventListener('click', function () { loadPage(page - 1, false); });
   byId('nextButton').addEventListener('click', function () { loadPage(page + 1, false); });
 
-  /* ---------- Ticket details drawer ---------- */
-
   document.querySelectorAll('[data-close]').forEach(function (button) {
     button.addEventListener('click', function () { button.closest('dialog').close(); });
   });
-
-  function group(title, pairs) {
-    var box = el('div', 'detail-group');
-    if (title) box.appendChild(el('h3', '', title));
-    var list = el('dl', 'detail-rows');
-    pairs.forEach(function (pair) {
-      var row = el('div');
-      row.appendChild(el('dt', '', pair[0]));
-      row.appendChild(el('dd', '', pair[1]));
-      list.appendChild(row);
-    });
-    box.appendChild(list);
-    return box;
-  }
 
   function openDetails(t) {
     byId('detailsNumber').textContent = t.ticket_label;
@@ -333,8 +223,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------- Start ---------- */
-
   getJson('/api/auth/me')
     .then(function (result) {
       var user = result.user;
@@ -355,9 +243,10 @@ document.addEventListener('DOMContentLoaded', function () {
             timeZone = board.time_zone;
           }
         })
-        .catch(function () { /* dates just use this device's time zone */ })
+        .catch(function () { })
         .then(function () {
           updateClock();
+
           setInterval(updateClock, 30 * 1000);
           return getJson('/api/staff/services');
         })
@@ -367,7 +256,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return s.service_name + (s.counter_label ? ' · ' + s.counter_label : '');
           }).join('  |  ');
 
-          // A service filter only appears when staff handle more than one service
           if (services.length > 1) {
             services.forEach(function (s) {
               var option = el('option', '', s.service_name);
@@ -379,5 +267,5 @@ document.addEventListener('DOMContentLoaded', function () {
           return loadPage(1, false);
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });

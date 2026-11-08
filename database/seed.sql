@@ -1,6 +1,4 @@
--- ClinicFlow sample data (PostgreSQL). Run after schema.sql.
--- Every account's password is: password123
-
+--demo data: 
 INSERT INTO admins (full_name, email, password_hash, contact_number) VALUES
 ('System Admin', 'admin@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '1234567890');
 
@@ -22,7 +20,6 @@ INSERT INTO staff_services (counter_label, staff_id, service_id) VALUES
 INSERT INTO clinic_settings (clinic_name, time_zone, near_threshold, grace_minutes, default_travel_minutes) VALUES
 ('ClinicFlow Main', 'Asia/Manila', 3, 10, 15);
 
--- Today's tickets (today = the date in the clinic's time zone)
 INSERT INTO tickets (queue_date, queue_number, status, patient_id, staff_id, service_id, queued_at) VALUES
 ((NOW() AT TIME ZONE 'Asia/Manila')::date, 1, 'completed', 1, 1,    1, NOW() - INTERVAL '2 hours'),
 ((NOW() AT TIME ZONE 'Asia/Manila')::date, 2, 'completed', 2, 1,    1, NOW() - INTERVAL '1 hour'),
@@ -32,7 +29,6 @@ INSERT INTO ticket_history (action, reason, ticket_id, staff_id) VALUES
 ('completed', 'Finished consultation', 1, 1),
 ('completed', 'Finished consultation', 2, 1);
 
--- 3 weeks of past tickets, so the demo charts have data
 INSERT INTO tickets (queue_date, queue_number, status, patient_id, staff_id, service_id, queued_at, called_at, completed_at) VALUES
 ((NOW() AT TIME ZONE 'Asia/Manila')::date - 21, 1, 'completed', 1, 1, 1, NOW() - INTERVAL '506 hours', NOW() - INTERVAL '505 hours', NOW() - INTERVAL '504 hours'),
 ((NOW() AT TIME ZONE 'Asia/Manila')::date - 18, 2, 'completed', 2, 2, 1, NOW() - INTERVAL '434 hours', NOW() - INTERVAL '433 hours', NOW() - INTERVAL '432 hours'),

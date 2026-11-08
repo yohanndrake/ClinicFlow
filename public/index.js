@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//index.js - landing page script, theme switch, phone menu, live service cards every 10 seconds and login aware buttons
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,60 +12,50 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
+function el(tag, className, text) {
+  var node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
 
-/* ---------- Everything else waits until the page is ready ---------- */
+function formatTime(value) {
+  var parts = String(value).split(':');
+  var hour = Number(parts[0]);
+  return (hour % 12 || 12) + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
+}
 
 document.addEventListener('DOMContentLoaded', function () {
-  var REFRESH_SECONDS = 10; // how often the queue cards ask the server for the latest numbers
-
-  var menuButton = document.getElementById('menuButton');
-  var siteMenu = document.getElementById('siteMenu');
-  var servicesEl = document.getElementById('services');
-  var queueMessage = document.getElementById('queueMessage');
-
-  /* Theme buttons */
   setTheme(startTheme);
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.addEventListener('click', function () {
       setTheme(button.dataset.themeSet);
     });
   });
+});
 
-  /* Phone menu */
+document.addEventListener('DOMContentLoaded', function () {
+  var REFRESH_SECONDS = 10;
+
+  var menuButton = document.getElementById('menuButton');
+  var siteMenu = document.getElementById('siteMenu');
+  var servicesEl = document.getElementById('services');
+  var queueMessage = document.getElementById('queueMessage');
+
   menuButton.addEventListener('click', function () {
     var open = siteMenu.classList.toggle('is-open');
     menuButton.setAttribute('aria-expanded', String(open));
   });
-
-  /* ---------- Small helpers ---------- */
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>
-  // Text is always added with textContent, so nothing typed by an admin can inject HTML.
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  // "08:00:00" -> "8:00 AM"
-  function formatTime(value) {
-    var parts = String(value).split(':');
-    var hour = Number(parts[0]);
-    return (hour % 12 || 12) + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
-  }
 
   function homeFor(user) {
     if (user.mustChangePassword) return '/force-password/force-password.html';
@@ -75,9 +63,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (user.role === 'staff') return '/staff/console.html';
     return '/patient/home.html';
   }
-
-  /* ---------- Is someone already logged in? ---------- */
-  // If so, the buttons should lead straight to their pages instead of login.
 
   fetch('/api/auth/me')
     .then(function (res) { return res.ok ? res.json() : null; })
@@ -90,15 +75,11 @@ document.addEventListener('DOMContentLoaded', function () {
       account.href = home;
       account.hidden = false;
 
-      // Patients go straight to "Take a number"; staff and admins go to their own start page
       document.getElementById('takeNumberButton').href =
         data.user.role === 'patient' && !data.user.mustChangePassword ? '/patient/take-number.html' : home;
     })
-    .catch(function () { /* not reachable: leave the logged-out buttons */ });
+    .catch(function () { });
 
-  /* ---------- Today's queue ---------- */
-
-  // What to show: open, paused or closed. Outside opening hours counts as closed.
   function cardState(service) {
     if (service.state === 'open' && service.unavailable_reason === 'Outside opening hours') return 'closed';
     return service.state;
@@ -133,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
         card.appendChild(el('p', 'service-note', service.rooms.join(', ')));
       }
     } else {
-      // Paused or closed: the board hides numbers, so this card does too
       card.appendChild(el('p', 'service-note',
         state === 'paused'
           ? 'This service is paused' + (service.status_note ? ': ' + service.status_note : '.')
@@ -144,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return card;
   }
 
-  // Earliest opening and latest closing time across all services, for the footer
   function showFooterHours(services) {
     if (!services.length) return;
     var open = services[0].open_time;
@@ -168,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
           document.getElementById('footerName').textContent = data.clinic_name;
         }
 
-        servicesEl.textContent = ''; // clear the old cards
+        servicesEl.textContent = '';
         data.services.forEach(function (service) {
           servicesEl.appendChild(drawService(service));
         });
@@ -177,8 +156,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!data.services.length) queueMessage.textContent = 'No services are available right now.';
         showFooterHours(data.services);
       })
+
       .catch(function () {
-        // Keep showing the last good cards if there are any
         if (!servicesEl.children.length) {
           queueMessage.hidden = false;
           queueMessage.textContent = "Can't load today's queue right now. Please try again in a moment.";

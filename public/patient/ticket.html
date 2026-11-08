@@ -1,15 +1,17 @@
+<!--patient/ticket.html - my ticket page with the live queue status (feature 4)-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Ticket - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/patient/patient.css">
+  <script src="/patient/patient.js"></script>
   <link rel="stylesheet" href="/patient/ticket.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/patient/ticket.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
 
@@ -21,6 +23,7 @@
     </nav>
 
     <div class="header-tools">
+
       <a href="/patient/notifications.html" class="bell" id="bell" aria-label="Notifications">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
           <path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.3A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21z" fill="currentColor"/>
@@ -48,6 +51,7 @@
   </header>
 
   <main class="page">
+
     <div class="page-title">
       <h1>My Ticket</h1>
       <p class="now" id="updated" aria-live="off">Loading...</p>
@@ -55,17 +59,15 @@
 
     <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
 
-    <!-- "It's your turn" banner (called state only) -->
     <div class="called-banner" id="calledBanner" role="status" hidden>
       <p class="called-title" id="calledTitle"></p>
       <p id="calledSub"></p>
     </div>
 
-    <!-- Message after "I'm here" or cancel -->
     <div class="alert alert-ok" id="pageNotice" role="status" hidden></div>
 
-    <!-- Active ticket -->
     <div class="layout" id="activeArea" hidden>
+
       <section class="cf-card cf-card-raised ticket-card" aria-labelledby="numberLabel">
         <div class="ticket-top">
           <p class="muted" id="numberLabel">Your queue number</p>
@@ -75,7 +77,6 @@
         <p class="ticket-service" id="ticketService"></p>
         <p class="muted" id="ticketRoom"></p>
 
-        <!-- Waiting / Near / Called / Done -->
         <ol class="steps" aria-label="Ticket progress">
           <li data-step="0">Waiting</li>
           <li data-step="1">Near</li>
@@ -118,7 +119,6 @@
       </div>
     </div>
 
-    <!-- Finished ticket (completed / skipped / cancelled / expired) -->
     <section class="cf-card cf-card-raised end-card" id="endCard" hidden>
       <div class="card-head">
         <h2 class="card-title" id="endTitle"></h2>
@@ -130,7 +130,6 @@
       <a href="/patient/take-number.html" class="cf-btn cf-btn-primary" id="endAction">Take a new number</a>
     </section>
 
-    <!-- No ticket at all today -->
     <section class="cf-card cf-card-raised end-card" id="noneCard" hidden>
       <h2 class="card-title">No active ticket</h2>
       <p>You do not have an active queue number. Take a number to join the queue.</p>
@@ -140,7 +139,6 @@
     <p class="muted" id="loading">Loading your ticket...</p>
   </main>
 
-  <!-- Are you sure? -->
   <dialog id="cancelDialog" aria-labelledby="cancelTitle">
     <form method="dialog" class="dialog-body">
       <h2 id="cancelTitle">Cancel this ticket?</h2>

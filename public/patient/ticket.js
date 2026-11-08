@@ -1,39 +1,7 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//patient/ticket.js - my ticket script, live position, people ahead, estimated wait, called countdown, i'm here and cancel
 document.addEventListener('DOMContentLoaded', function () {
-  var REFRESH_SECONDS = 5; // how often the ticket is checked
+  var REFRESH_SECONDS = 5;
 
-  var userButton = document.getElementById('userButton');
-  var userMenu = document.getElementById('userMenu');
   var pageAlert = document.getElementById('pageAlert');
   var pageNotice = document.getElementById('pageNotice');
   var hereButton = document.getElementById('hereButton');
@@ -41,59 +9,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var alertsButton = document.getElementById('alertsButton');
   var cancelDialog = document.getElementById('cancelDialog');
 
-  var ticket = null;          // the latest ticket from the server
-  var lastState = null;       // used to notice when the state changes (waiting -> near -> called)
-  var lastFetchAt = 0;        // when we last heard from the server
-  var busy = false;           // true while a button action is being sent
+  var ticket = null;
+  var lastState = null;
+  var lastFetchAt = 0;
+  var busy = false;
 
-  // Words shown on the badge for each state
   var stateNames = {
     waiting: 'Waiting', near: 'Near', called: 'Called', completed: 'Completed',
     skipped: 'Skipped', cancelled: 'Cancelled', expired: 'Expired'
   };
-  // Which of the four bars is filled
   var stepOf = { waiting: 0, near: 1, called: 2, completed: 3 };
-
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  function capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
-  // "Maria Santos" -> "MS"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // "08:00:00" -> "8:00 AM"
-  function formatTime(value) {
-    var parts = String(value).split(':');
-    var hour = Number(parts[0]);
-    return (hour % 12 || 12) + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
-  }
-
-  function minutesText(minutes) {
-    if (minutes === null || minutes === undefined) return '—';
-    return Math.round(minutes) + ' min';
-  }
 
   function show(id, visible) {
     document.getElementById(id).hidden = !visible;
@@ -104,54 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
     pageNotice.hidden = !message;
   }
 
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', function (event) {
-    if (!userMenu.contains(event.target)) closeMenu();
-  });
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeMenu();
-      userButton.focus();
-    }
-  });
-
-  document.getElementById('logoutButton').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
-      .then(function () { window.location.href = '/login/login.html'; });
-  });
-
-  /* ---------- Talking to the server ---------- */
-
-  // Gets JSON. Logged-out people go to the login page, people without access to the error page.
-  function getJson(url) {
-    return fetch(url, { cache: 'no-store' }).then(function (res) {
-      if (res.status === 401) {
-        window.location.replace('/login/login.html');
-        throw new Error('not logged in');
-      }
-      if (res.status === 403) {
-        window.location.replace('/error/error.html?code=403');
-        throw new Error('not allowed');
-      }
-      if (!res.ok) throw new Error('bad status');
-      return res.json();
-    });
-  }
-
-  // POST with no body; resolves to { status, data }
   function post(url) {
     return fetch(url, { method: 'POST' }).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {
@@ -160,18 +37,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function loadBell() {
-    return getJson('/api/patient/notifications?limit=1').then(function (data) {
-      var count = document.getElementById('bellCount');
-      count.hidden = data.unread_count === 0;
-      count.textContent = data.unread_count > 9 ? '9+' : String(data.unread_count);
-      document.getElementById('bell').setAttribute('aria-label',
-        data.unread_count ? 'Notifications, ' + data.unread_count + ' unread' : 'Notifications');
-    });
-  }
-
-  /* ---------- "Updated 5 sec ago" and the arrive-by countdown ---------- */
-
   function tick() {
     if (lastFetchAt) {
       var seconds = Math.round((Date.now() - lastFetchAt) / 1000);
@@ -179,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function () {
         'Updated ' + (seconds < 5 ? 'just now' : seconds + ' sec ago');
     }
 
-    // Called: count down to the time the patient must arrive by
     if (ticket && ticket.state === 'called' && ticket.arrive_by) {
       var left = Math.max(0, Math.round((new Date(ticket.arrive_by).getTime() - Date.now()) / 1000));
       var clock = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
@@ -188,12 +52,6 @@ document.addEventListener('DOMContentLoaded', function () {
         left > 0 ? 'Please arrive within ' + clock : 'Your time is up. Ask the front desk if you are still here.';
     }
   }
-
-  function pad(n) {
-    return (n < 10 ? '0' : '') + n;
-  }
-
-  /* ---------- Browser alerts (optional) ---------- */
 
   function updateAlertsButton() {
     var supported = 'Notification' in window;
@@ -217,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
     Notification.requestPermission().then(updateAlertsButton);
   });
 
-  // Pops up a message when the ticket gets closer (only if the person allowed it)
   function notifyChange(newTicket) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     if (lastState === newTicket.state) return;
@@ -230,12 +87,9 @@ document.addEventListener('DOMContentLoaded', function () {
       try {
         new Notification('Ticket ' + newTicket.ticket_label, { body: message });
       } catch (err) {
-        // some phones only allow alerts from an installed app; ignore
       }
     }
   }
-
-  /* ---------- Drawing the page ---------- */
 
   function showActive(t) {
     show('activeArea', true);
@@ -251,7 +105,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('ticketRoom').textContent = t.room || '';
     document.getElementById('ticketRoom').hidden = !t.room;
 
-    // Progress bars
     var current = stepOf[t.state];
     document.querySelectorAll('.steps li').forEach(function (item) {
       var step = Number(item.dataset.step);
@@ -278,14 +131,12 @@ document.addEventListener('DOMContentLoaded', function () {
         ahead === 0 ? "You're next" : 'About ' + t.estimated_wait_minutes + ' min';
     }
 
-    // Buttons: "I'm here" until it is pressed, Cancel only before being called
     var arrived = !!t.arrived_at;
     show('hereButton', !arrived);
     show('cancelButton', t.status === 'waiting');
     hereButton.disabled = busy;
     cancelButton.disabled = busy;
 
-    // Clinic queue card
     var q = t.queue;
     var queueState = q.queue_status;
     var queueBadge = document.getElementById('queueBadge');
@@ -314,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
     show('noneCard', false);
     show('endCard', true);
 
-    var state = t.state; // completed, skipped, cancelled or expired
+    var state = t.state;
     var badge = document.getElementById('endBadge');
     badge.className = 'cf-badge cf-' + state;
     badge.textContent = stateNames[state] || capitalize(state);
@@ -362,8 +213,6 @@ document.addEventListener('DOMContentLoaded', function () {
     tick();
   }
 
-  /* ---------- Load ---------- */
-
   function load() {
     return Promise.all([getJson('/api/patient/tickets/current'), loadBell()])
       .then(function (results) {
@@ -382,8 +231,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('loading').hidden = true;
       });
   }
-
-  /* ---------- I'm here ---------- */
 
   hereButton.addEventListener('click', function () {
     if (busy || !ticket) return;
@@ -410,14 +257,11 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  /* ---------- Cancel (asks first) ---------- */
-
   cancelButton.addEventListener('click', function () {
     if (busy) return;
     cancelDialog.showModal();
   });
 
-  // The dialog's two buttons close it and set returnValue to "keep" or "cancel"
   cancelDialog.addEventListener('close', function () {
     if (cancelDialog.returnValue !== 'cancel' || !ticket) return;
     busy = true;
@@ -443,8 +287,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  /* ---------- Start ---------- */
-
   updateAlertsButton();
 
   getJson('/api/auth/me')
@@ -464,11 +306,10 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function () {
           setInterval(tick, 1000);
           setInterval(function () { if (!busy) load(); }, REFRESH_SECONDS * 1000);
-          // Coming back to the tab: refresh at once instead of waiting for the next tick.
           document.addEventListener('visibilitychange', function () {
             if (!document.hidden && !busy) load();
           });
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });

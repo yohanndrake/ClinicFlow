@@ -1,50 +1,17 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//patient/notifications.js - notifications script, near, called, skipped, cancelled and paused alerts, mark one or all as read
 document.addEventListener('DOMContentLoaded', function () {
   var REFRESH_SECONDS = 15;
 
-  var userButton = document.getElementById('userButton');
-  var userMenu = document.getElementById('userMenu');
   var pageAlert = document.getElementById('pageAlert');
   var markAll = document.getElementById('markAll');
   var list = document.getElementById('list');
 
-  var timeZone = undefined;      // the clinic's time zone, known after the board answers
-  var filter = 'all';            // 'all' or 'unread'
-  var notifications = [];        // everything the server sent (newest first)
+  var timeZone = undefined;
+  var filter = 'all';
+  var notifications = [];
   var unreadCount = 0;
   var busy = false;
 
-  // The title shown for each kind of notification
   var titles = {
     near: 'Your turn is near',
     called: 'You are being called',
@@ -53,32 +20,6 @@ document.addEventListener('DOMContentLoaded', function () {
     paused: 'Service paused'
   };
 
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  // "Maria Santos" -> "MS"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // Today: "10:24 AM". Other days: "Oct 23, 10:24 AM"
   function timeText(isoTimestamp) {
     var when = new Date(isoTimestamp);
     var options = { hour: 'numeric', minute: '2-digit', timeZone: timeZone };
@@ -88,53 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     if (dayOf(when) === dayOf(new Date())) return time;
     return when.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timeZone }) + ', ' + time;
-  }
-
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', function (event) {
-    if (!userMenu.contains(event.target)) closeMenu();
-  });
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeMenu();
-      userButton.focus();
-    }
-  });
-
-  document.getElementById('logoutButton').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
-      .then(function () { window.location.href = '/login/login.html'; });
-  });
-
-  /* ---------- Talking to the server ---------- */
-
-  // Gets JSON. Logged-out people go to the login page, people without access to the error page.
-  function getJson(url) {
-    return fetch(url, { cache: 'no-store' }).then(function (res) {
-      if (res.status === 401) {
-        window.location.replace('/login/login.html');
-        throw new Error('not logged in');
-      }
-      if (res.status === 403) {
-        window.location.replace('/error/error.html?code=403');
-        throw new Error('not allowed');
-      }
-      if (!res.ok) throw new Error('bad status');
-      return res.json();
-    });
   }
 
   function post(url) {
@@ -147,13 +41,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------- Drawing the list ---------- */
-
   function drawItem(n) {
     var li = el('li');
     var item = el('button', 'item' + (n.is_read ? '' : ' is-unread'));
     item.type = 'button';
-    // Only unread ones do something when tapped
     if (n.is_read) item.setAttribute('aria-disabled', 'true');
 
     item.appendChild(el('span', 'dot'));
@@ -164,7 +55,6 @@ document.addEventListener('DOMContentLoaded', function () {
     text.appendChild(el('span', 'item-time', timeText(n.created_at) + (n.is_read ? '' : ' · Unread')));
     item.appendChild(text);
 
-    // Desktop shows the time and "Unread" on the right
     var side = el('span', 'item-side');
     side.appendChild(el('span', '', timeText(n.created_at)));
     if (!n.is_read) side.appendChild(el('span', 'item-state', 'Unread'));
@@ -201,8 +91,6 @@ document.addEventListener('DOMContentLoaded', function () {
     markAll.disabled = unreadCount === 0 || busy;
   }
 
-  /* ---------- Loading ---------- */
-
   function load() {
     return getJson('/api/patient/notifications?limit=100').then(function (data) {
       notifications = data.notifications;
@@ -216,8 +104,6 @@ document.addEventListener('DOMContentLoaded', function () {
       pageAlert.hidden = false;
     });
   }
-
-  /* ---------- Marking as read ---------- */
 
   function failed(err) {
     if (err.message === 'not logged in') return;
@@ -256,8 +142,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  /* ---------- All / Unread ---------- */
-
   document.querySelectorAll('[data-filter]').forEach(function (button) {
     button.addEventListener('click', function () {
       filter = button.dataset.filter;
@@ -267,8 +151,6 @@ document.addEventListener('DOMContentLoaded', function () {
       draw();
     });
   });
-
-  /* ---------- Start ---------- */
 
   getJson('/api/auth/me')
     .then(function (data) {
@@ -290,12 +172,11 @@ document.addEventListener('DOMContentLoaded', function () {
             timeZone = board.time_zone;
           }
         })
-        .catch(function () { /* times just use this device's time zone */ })
+        .catch(function () { })
         .then(load)
         .then(function () {
-          // New alerts arrive while the page is open
           setInterval(function () { if (!busy) load(); }, REFRESH_SECONDS * 1000);
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });

@@ -1,15 +1,17 @@
+<!--staff/records.html - staff queue records page-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Queue Records - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/staff/staff.css">
+  <script src="/staff/staff.js"></script>
   <link rel="stylesheet" href="/staff/records.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/staff/records.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
     <span class="console-label">Staff console</span>
@@ -37,6 +39,7 @@
   </header>
 
   <div class="shell">
+
     <nav class="side-nav" aria-label="Staff pages">
       <a href="/staff/console.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
       <a href="/staff/records.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
@@ -44,6 +47,7 @@
 
     <main class="page">
       <h1>Queue Records</h1>
+
       <p class="muted" id="servicesLine"></p>
 
       <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
@@ -110,7 +114,6 @@
     </main>
   </div>
 
-  <!-- Ticket details: a drawer from the right on desktop, a bottom sheet on phones -->
   <dialog id="detailsDialog" class="drawer" aria-labelledby="detailsTitle">
     <div class="dialog-body">
       <div class="dialog-head"><h2 id="detailsTitle">Ticket Details</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>

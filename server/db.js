@@ -1,13 +1,18 @@
-const { Pool, types } = require('pg');
+//db.js makes the connection to the database which the whole backend uses
 
-// Make Postgres values easier to use in JavaScript:
-types.setTypeParser(20, v => parseInt(v, 10)); // COUNT(*) comes back as text by default
-types.setTypeParser(1082, v => v);             // DATE stays 'YYYY-MM-DD' (no time zone shifting)
+//loads pg package for connecting to PostgreSQL database
+const { Pool, types } = require("pg");
 
+//change how PostgreSQL values arrive in js
+types.setTypeParser(20, (v) => parseInt(v, 10));
+types.setTypeParser(1082, (v) => v);
+
+//creates the connection pool to Supabase, with up to 10 open connections.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Supabase requires an encrypted connection
+  ssl: { rejectUnauthorized: false },
   max: 10,
 });
 
+//share the pool with the other files.
 module.exports = pool;

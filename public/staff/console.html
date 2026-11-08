@@ -1,15 +1,17 @@
+<!--staff/console.html - staff queue console page (feature 3)-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Queue Console - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/staff/staff.css">
+  <script src="/staff/staff.js"></script>
   <link rel="stylesheet" href="/staff/console.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/staff/console.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
     <span class="console-label">Staff console</span>
@@ -37,7 +39,7 @@
   </header>
 
   <div class="shell">
-    <!-- Phones: tabs under the header. Desktop: a sidebar. -->
+
     <nav class="side-nav" aria-label="Staff pages">
       <a href="/staff/console.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
       <a href="/staff/records.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
@@ -51,14 +53,13 @@
 
       <p class="muted" id="loading">Loading the queue...</p>
 
-      <!-- Nobody is assigned to a service yet -->
       <div class="cf-card" id="noService" hidden>
         <h2>No service assigned</h2>
         <p class="muted">You are not assigned to a service yet. Ask an admin to assign you to one.</p>
       </div>
 
       <div id="consoleArea" hidden>
-        <!-- Which service, its state, room and hours -->
+
         <section class="service-bar" aria-label="Service">
           <div class="service-main">
             <label class="switcher" id="switcher" hidden>
@@ -74,7 +75,6 @@
 
         <div class="banner" id="stateBanner" role="status" hidden></div>
 
-        <!-- Five counters -->
         <dl class="counters" aria-label="Today's totals">
           <div class="counter"><dt>Waiting</dt><dd id="countWaiting">0</dd></div>
           <div class="counter"><dt>Serving</dt><dd id="countServing">0</dd></div>
@@ -84,6 +84,7 @@
         </dl>
 
         <div class="top-row">
+
           <section class="cf-card" aria-labelledby="servingHeading">
             <div class="card-head">
               <h2 id="servingHeading">Current Serving</h2>
@@ -164,8 +165,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-
-  <!-- ===== Dialogs ===== -->
 
   <dialog id="walkinDialog" aria-labelledby="walkinTitle">
     <form class="dialog-body" id="walkinForm" novalidate>
@@ -286,7 +285,6 @@
     </form>
   </dialog>
 
-  <!-- Ticket details: a drawer from the right on desktop, a bottom sheet on phones -->
   <dialog id="detailsDialog" class="drawer" aria-labelledby="detailsTitle">
     <div class="dialog-body">
       <div class="dialog-head"><h2 id="detailsTitle">Ticket Details</h2><button type="button" class="dialog-x" data-close aria-label="Close">&times;</button></div>

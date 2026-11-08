@@ -1,15 +1,15 @@
+<!--register/register.html - patient sign up page-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Register - ClinicFlow</title>
+
   <link rel="stylesheet" href="/register/register.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/register/register.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span>ClinicFlow</span></a>
 
@@ -19,7 +19,6 @@
         <button type="button" data-theme-set="dark" aria-label="Dark mode" title="Dark mode">&#9790;</button>
       </div>
 
-      <!-- Phones: this button opens the menu below. Desktop: hidden, the links are shown directly. -->
       <button type="button" class="menu-button" id="menuButton" aria-label="Menu" aria-expanded="false" aria-controls="siteMenu">&#9776;</button>
     </div>
 
@@ -31,10 +30,10 @@
   </header>
 
   <main class="page">
+
     <section class="cf-card cf-card-raised register-card">
       <h1>Register</h1>
 
-      <!-- Shows problems that are not about one field (connection lost, server error) -->
       <div class="alert" id="formAlert" role="alert" hidden></div>
 
       <form id="registerForm" novalidate>
@@ -58,6 +57,7 @@
 
         <div class="field">
           <label class="cf-label" for="password">Password</label>
+
           <div class="password-wrap">
             <input class="cf-input" type="password" id="password" name="password" autocomplete="new-password" aria-describedby="passwordHint" required>
             <button type="button" class="show-hide" data-target="password" aria-controls="password">Show</button>
@@ -68,6 +68,7 @@
 
         <div class="field">
           <label class="cf-label" for="confirm">Confirm password</label>
+
           <div class="password-wrap">
             <input class="cf-input" type="password" id="confirm" name="confirm" autocomplete="new-password" required>
             <button type="button" class="show-hide" data-target="confirm" aria-controls="confirm">Show</button>

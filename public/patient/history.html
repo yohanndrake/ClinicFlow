@@ -1,15 +1,17 @@
+<!--patient/history.html - patient visit history page-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Visit History - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/patient/patient.css">
+  <script src="/patient/patient.js"></script>
   <link rel="stylesheet" href="/patient/history.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/patient/history.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
 
@@ -21,6 +23,7 @@
     </nav>
 
     <div class="header-tools">
+
       <a href="/patient/notifications.html" class="bell" id="bell" aria-label="Notifications">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
           <path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.3A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21z" fill="currentColor"/>
@@ -48,6 +51,7 @@
   </header>
 
   <main class="page">
+
     <div class="page-title">
       <h1>Visit History</h1>
       <p class="now" id="now"></p>
@@ -55,7 +59,6 @@
 
     <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
 
-    <!-- Filters: changing one reloads the list -->
     <form class="filters" id="filters" aria-label="Filter visits">
       <div class="filter">
         <label class="cf-label" for="range">Date range</label>
@@ -75,7 +78,6 @@
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
-      <!-- Only shown when the clinic has more than one service -->
       <div class="filter" id="serviceFilter" hidden>
         <label class="cf-label" for="service">Service</label>
         <select class="cf-input" id="service">
@@ -87,7 +89,6 @@
     <section class="results" aria-label="Visits" aria-live="polite">
       <p class="muted" id="loading">Loading your visits...</p>
 
-      <!-- Phones: one small card per visit. Desktop: a real table. -->
       <table class="visits" id="visitsTable" hidden>
         <thead>
           <tr><th scope="col">Date</th><th scope="col">Ticket number</th><th scope="col">Service</th><th scope="col">Status</th><th scope="col">Wait time</th></tr>
@@ -95,10 +96,8 @@
         <tbody id="visitRows"></tbody>
       </table>
 
-      <!-- Phones: add the next page under the list -->
       <button type="button" class="cf-btn cf-btn-secondary cf-btn-block load-more" id="loadMore" hidden>Load more</button>
 
-      <!-- Desktop: previous / next page -->
       <div class="pager" id="pager" hidden>
         <button type="button" class="cf-btn cf-btn-secondary" id="prevButton">Previous</button>
         <span class="muted" id="pageInfo"></span>
@@ -113,7 +112,6 @@
     </section>
   </main>
 
-  <!-- Visit detail: a bottom sheet on phones, a centered box on desktop -->
   <dialog id="detailDialog" aria-labelledby="detailTitle">
     <form method="dialog" class="dialog-body">
       <div class="dialog-head">

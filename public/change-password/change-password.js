@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//change-password/change-password.js - change password script, checks the form, saves the new password then logs the user out
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,37 +12,37 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
+function initials(name) {
+  var words = String(name).trim().split(/\s+/);
+  var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
+  return letters.toUpperCase();
+}
 
-/* ---------- Everything else waits until the page is ready ---------- */
+function homeFor(role) {
+  if (role === 'admin') return '/admin/dashboard.html';
+  if (role === 'staff') return '/staff/console.html';
+  return '/patient/home.html';
+}
+
+function closeMenu() {
+  var userMenu = document.getElementById('userMenu');
+  var userButton = document.getElementById('userButton');
+  if (!userMenu || !userButton) return;
+  userMenu.hidden = true;
+  userButton.setAttribute('aria-expanded', 'false');
+}
 
 document.addEventListener('DOMContentLoaded', function () {
-  var form = document.getElementById('passwordForm');
-  var saveButton = document.getElementById('saveButton');
-  var formAlert = document.getElementById('formAlert');
-  var successPanel = document.getElementById('successPanel');
-  var userButton = document.getElementById('userButton');
-  var userMenu = document.getElementById('userMenu');
-
-  // Each field and the little red message under it
-  var fields = {
-    current: { input: document.getElementById('current'), error: document.getElementById('currentError') },
-    newPassword: { input: document.getElementById('newPassword'), error: document.getElementById('newPasswordError') },
-    confirm: { input: document.getElementById('confirm'), error: document.getElementById('confirmError') }
-  };
-
-  /* Theme buttons */
   setTheme(startTheme);
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -52,53 +50,48 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* ---------- Small helpers ---------- */
+  var userButton = document.getElementById('userButton');
+  var userMenu = document.getElementById('userMenu');
+  if (userButton && userMenu) {
+    userButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var open = userMenu.hidden;
+      userMenu.hidden = !open;
+      userButton.setAttribute('aria-expanded', String(open));
+    });
 
-  function homeFor(role) {
-    if (role === 'admin') return '/admin/dashboard.html';
-    if (role === 'staff') return '/staff/console.html';
-    return '/patient/home.html';
+    document.addEventListener('click', function (event) {
+      if (!userMenu.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeMenu();
+        userButton.focus();
+      }
+    });
   }
 
-  // "Maria Santos" -> "MS"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
+  var logoutButton = document.getElementById('logoutButton');
+  if (logoutButton) {
+    logoutButton.addEventListener('click', function () {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .catch(function () { })
+        .then(function () { window.location.href = '/login/login.html'; });
+    });
   }
+});
 
-  /* ---------- User menu ---------- */
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.getElementById('passwordForm');
+  var saveButton = document.getElementById('saveButton');
+  var formAlert = document.getElementById('formAlert');
+  var successPanel = document.getElementById('successPanel');
 
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
-
-  // Click anywhere else, or press Escape, to close it
-  document.addEventListener('click', function (event) {
-    if (!userMenu.contains(event.target)) closeMenu();
-  });
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeMenu();
-      userButton.focus();
-    }
-  });
-
-  document.getElementById('logoutButton').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
-      .then(function () { window.location.href = '/login/login.html'; });
-  });
-
-  /* ---------- Show / Hide buttons (one for each password box) ---------- */
+  var fields = {
+    current: { input: document.getElementById('current'), error: document.getElementById('currentError') },
+    newPassword: { input: document.getElementById('newPassword'), error: document.getElementById('newPasswordError') },
+    confirm: { input: document.getElementById('confirm'), error: document.getElementById('confirmError') }
+  };
 
   document.querySelectorAll('.show-hide').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -108,8 +101,6 @@ document.addEventListener('DOMContentLoaded', function () {
       button.textContent = hidden ? 'Hide' : 'Show';
     });
   });
-
-  /* ---------- Who is this? ---------- */
 
   fetch('/api/auth/me')
     .then(function (res) {
@@ -121,7 +112,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function (data) {
       if (!data) return;
-      // Someone on a temporary password uses the forced page instead
       if (data.user.mustChangePassword) {
         window.location.replace('/force-password/force-password.html');
         return;
@@ -130,9 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('headerInitials').textContent = initials(data.user.name);
       document.getElementById('backButton').href = homeFor(data.user.role);
     })
-    .catch(function () { /* the form still works without the name */ });
-
-  /* ---------- Error helpers ---------- */
+    .catch(function () { });
 
   function showFieldError(name, message) {
     var field = fields[name];
@@ -156,7 +144,6 @@ document.addEventListener('DOMContentLoaded', function () {
     formAlert.hidden = false;
   }
 
-  // Put the cursor in the first field that has a problem
   function focusFirstError() {
     var order = ['current', 'newPassword', 'confirm'];
     for (var i = 0; i < order.length; i++) {
@@ -172,8 +159,6 @@ document.addEventListener('DOMContentLoaded', function () {
     saveButton.textContent = 'Save';
   }
 
-  /* ---------- Save ---------- */
-
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     clearErrors();
@@ -183,7 +168,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var confirm = fields.confirm.input.value;
     var valid = true;
 
-    // These are the same rules the server checks, so people see problems before the request is sent.
     if (!current) {
       showFieldError('current', 'Enter your current password.');
       valid = false;
@@ -223,11 +207,11 @@ document.addEventListener('DOMContentLoaded', function () {
           return { status: res.status, data: data };
         });
       })
+
       .then(function (result) {
         var message = result.data.error || '';
 
         if (result.status === 200) {
-          // The server has logged the person out, so show the message and the login button.
           form.hidden = true;
           successPanel.hidden = false;
           closeMenu();
@@ -237,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (result.status === 401 && /current password/i.test(message)) {
           showFieldError('current', 'Your current password is incorrect.');
         } else if (result.status === 401) {
-          window.location.replace('/login/login.html'); // the login expired
+          window.location.replace('/login/login.html');
           return;
         } else if (result.status === 400 && /different/i.test(message)) {
           showFieldError('newPassword', 'The new password must be different from your current password.');
@@ -249,6 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
         focusFirstError();
         resetButton();
       })
+
       .catch(function () {
         showAlert("Can't reach the server. Check your connection and try again.");
         resetButton();

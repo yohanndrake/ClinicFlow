@@ -1,15 +1,17 @@
+<!--admin/settings.html - clinic settings page-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clinic Settings - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js"></script>
   <link rel="stylesheet" href="/admin/settings.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/admin/settings.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
     <span class="console-label">Admin console</span>
@@ -37,6 +39,7 @@
   </header>
 
   <div class="shell">
+
     <nav class="side-nav" aria-label="Admin pages">
       <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
       <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
@@ -50,9 +53,11 @@
       <h1>Clinic Settings</h1>
 
       <div class="alert alert-error" id="pageAlert" role="alert" hidden></div>
+
       <p class="muted" id="loading">Loading settings...</p>
 
       <form class="cf-card settings-form" id="settingsForm" novalidate hidden>
+
         <div class="field">
           <label class="cf-label" for="sName">Clinic name</label>
           <input class="cf-input" id="sName" maxlength="100" autocomplete="off">

@@ -1,15 +1,17 @@
+<!--admin/services.html - admin services page-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Services - ClinicFlow</title>
+
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js"></script>
   <link rel="stylesheet" href="/admin/services.css">
-  <!-- Loaded in the head so the saved light/dark theme is applied before the page is drawn (no flash). -->
   <script src="/admin/services.js"></script>
 </head>
 <body>
-
   <header class="site-header">
     <a class="brand" href="/admin/dashboard.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
     <span class="console-label">Admin console</span>
@@ -37,6 +39,7 @@
   </header>
 
   <div class="shell">
+
     <nav class="side-nav" aria-label="Admin pages">
       <a href="/admin/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
       <a href="/admin/reports.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reports</span></a>
@@ -75,6 +78,7 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
+
       <div class="cf-card empty-card" id="empty" hidden><h2>No services found</h2><p class="muted">Add a service to start a queue.</p></div>
 
       <p class="hint">Services are never hard-deleted: a service that has history is deactivated instead, and can be activated again.</p>

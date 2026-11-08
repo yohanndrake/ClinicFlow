@@ -1,20 +1,32 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const pool = require('../db');
-const { requireLogin, blockIfMustChangePassword } = require('../middleware/auth');
-const { ROLES, emailInUse, PASSWORD_RULE, isStrongPassword, isValidContact } = require('../helpers');
+//routes/auth.js - register, login, logout, who am i, profile and change password
+
+//imports: Express, bcrypt (password hashing), the database, the guards and the helpers.
+const express = require("express");
+const bcrypt = require("bcrypt");
+const pool = require("../db");
+const {
+  requireLogin,
+  blockIfMustChangePassword,
+} = require("../middleware/auth");
+const {
+  ROLES,
+  emailInUse,
+  PASSWORD_RULE,
+  isStrongPassword,
+  isValidContact,
+} = require("../helpers");
 
 const router = express.Router();
 
+//a simple email pattern: text, an @, text, a dot, text, with no spaces.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* ---------- login attempt limit ---------- */
-// After 5 wrong logins for the same email from the same address, login is locked for 15 minutes.
+//limit login attempts: lock an IP and email for 15 minutes after 5 wrong passwords
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MS = 15 * 60 * 1000;
-const failedLogins = new Map(); // "address|email" -> { count, since, lockedUntil }
+const failedLogins = new Map();
 
-// Seconds left on a lock (0 if not locked).
+//return seconds left on a login lock, or 0 if not locked, and clear expired locks
 function lockedSeconds(key) {
   const entry = failedLogins.get(key);
   if (!entry || !entry.lockedUntil) return 0;
@@ -25,197 +37,275 @@ function lockedSeconds(key) {
   return Math.ceil((entry.lockedUntil - Date.now()) / 1000);
 }
 
+//record a failed login, lock after 5 failures, and clear old entries when the map gets large
 function recordFailedLogin(key) {
   const now = Date.now();
   if (failedLogins.size > 5000) {
-    for (const [k, e] of failedLogins) if (now - e.since > LOCK_MS) failedLogins.delete(k);
+    for (const [k, e] of failedLogins)
+      if (now - e.since > LOCK_MS) failedLogins.delete(k);
   }
   let entry = failedLogins.get(key);
-  if (!entry || now - entry.since > LOCK_MS) entry = { count: 0, since: now, lockedUntil: 0 };
+  if (!entry || now - entry.since > LOCK_MS)
+    entry = { count: 0, since: now, lockedUntil: 0 };
   entry.count += 1;
   if (entry.count >= MAX_FAILED_LOGINS) entry.lockedUntil = now + LOCK_MS;
   failedLogins.set(key, entry);
 }
 
+//send a 429 "too many attempts" reply with the wait time
 const tooManyAttempts = (res, seconds) =>
   res.status(429).json({
     error: `Too many attempts. Try again in ${Math.ceil(seconds / 60)} minute(s).`,
     retry_after_seconds: seconds,
   });
 
-/* ---------- routes ---------- */
-
-// POST /api/auth/register  (patients only)
-router.post('/register', async (req, res, next) => {
+//register a patient: validate the form, hash the password, create the account and log them in
+router.post("/register", async (req, res, next) => {
   try {
+    //check the registration fields: required values, email shape, password strength and contact number
     const { full_name, email, password, contact_number } = req.body;
     if (!full_name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email and password are required' });
+      return res
+        .status(400)
+        .json({ error: "Name, email and password are required" });
     }
-    if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email' });
-    if (!isStrongPassword(password)) return res.status(400).json({ error: PASSWORD_RULE });
+    if (!EMAIL_RE.test(email))
+      return res.status(400).json({ error: "Invalid email" });
+    if (!isStrongPassword(password))
+      return res.status(400).json({ error: PASSWORD_RULE });
     if (contact_number && !isValidContact(String(contact_number))) {
-      return res.status(400).json({ error: 'Contact number can only contain digits, spaces, + - ( )' });
+      return res
+        .status(400)
+        .json({
+          error: "Contact number can only contain digits, spaces, + - ( )",
+        });
     }
 
-    // An email can only belong to one account across patients, staff and admins.
+    //the email must not exist in any of the three account tables (409 = conflict)
     if (await emailInUse(pool, email.trim().toLowerCase())) {
-      return res.status(409).json({ error: 'Email already registered' });
+      return res.status(409).json({ error: "Email already registered" });
     }
 
+    //never store the password itself. bcrypt makes a one-way hash (10 = work factor), and only the hash is saved
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
       `INSERT INTO patients (full_name, email, password_hash, contact_number)
        VALUES ($1, $2, $3, $4) RETURNING patient_id`,
-      [full_name.trim().slice(0, 100), email.trim().toLowerCase(), hash, contact_number || null]
+      [
+        full_name.trim().slice(0, 100),
+        email.trim().toLowerCase(),
+        hash,
+        contact_number || null,
+      ],
     );
 
+    //log the new patient in by saving them to the session
     req.session.user = {
-      id: rows[0].patient_id, role: 'patient', name: full_name.trim().slice(0, 100), mustChangePassword: false,
+      id: rows[0].patient_id,
+      role: "patient",
+      name: full_name.trim().slice(0, 100),
+      mustChangePassword: false,
     };
     res.status(201).json({ user: req.session.user });
   } catch (err) {
-    if (err.code === '23505') { // Postgres "unique violation"
-      return res.status(409).json({ error: 'Email already registered' });
+    //if two people register the same email at once, the database rejects the second one
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "Email already registered" });
     }
     next(err);
   }
 });
 
-// POST /api/auth/login  body: { email, password }
-// One login form for all roles: look the email up in each table.
-router.post('/login', async (req, res, next) => {
+//check the email and password across all role tables, and start a session if they match
+router.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({ error: "Email and password are required" });
     }
+
+    //clean the email, then build the lock key from the IP and email
     const cleanEmail = String(email).trim().toLowerCase();
     const key = `${req.ip}|${cleanEmail}`;
 
+    //if this IP and email are currently locked, stop here.
     const locked = lockedSeconds(key);
     if (locked) return tooManyAttempts(res, locked);
 
+    //try each role's table for the email, then check the password and start the session
     for (const [role, { table, idCol }] of Object.entries(ROLES)) {
       const { rows } = await pool.query(
         `SELECT ${idCol} AS id, full_name, password_hash, status, must_change_password
            FROM ${table} WHERE email = $1`,
-        [cleanEmail]
+        [cleanEmail],
       );
       const row = rows[0];
+
+      //not in this table: try the next role.
       if (!row) continue;
 
+      //check the password against the stored hash, and refuse deactivated accounts
       if (!(await bcrypt.compare(String(password), row.password_hash))) break;
-      if (row.status !== 'active') {
-        return res.status(403).json({ error: 'Account is deactivated. Please contact the clinic.' });
+      if (row.status !== "active") {
+        return res
+          .status(403)
+          .json({
+            error: "Account is deactivated. Please contact the clinic.",
+          });
       }
 
+      //correct password: clear the failed attempts, save the user to the session, and return them
       failedLogins.delete(key);
       req.session.user = {
-        id: row.id, role, name: row.full_name, mustChangePassword: !!row.must_change_password,
+        id: row.id,
+        role,
+        name: row.full_name,
+        mustChangePassword: !!row.must_change_password,
       };
       return res.json({ user: req.session.user });
     }
 
+    //count the failed attempt, then reply 401, or 429 if this attempt triggered the lock
     recordFailedLogin(key);
     const nowLocked = lockedSeconds(key);
     if (nowLocked) return tooManyAttempts(res, nowLocked);
-    res.status(401).json({ error: 'Invalid email or password' });
+    res.status(401).json({ error: "Invalid email or password" });
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/auth/logout
-router.post('/logout', (req, res) => {
+//log out: destroy the server session and clear the cookie
+router.post("/logout", (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie('connect.sid');
+    res.clearCookie("connect.sid");
     res.json({ ok: true });
   });
 });
 
-// GET /api/auth/me
-router.get('/me', requireLogin, (req, res) => {
+//return the logged-in user, so each page knows whether to show or redirect
+router.get("/me", requireLogin, (req, res) => {
   res.json({ user: req.session.user });
 });
 
-// GET /api/auth/profile  - the logged-in user's own details
-router.get('/profile', requireLogin, blockIfMustChangePassword, async (req, res, next) => {
-  try {
-    const { id, role } = req.session.user;
-    const { table, idCol } = ROLES[role];
-    const { rows } = await pool.query(
-      `SELECT full_name, email, contact_number, created_at FROM ${table} WHERE ${idCol} = $1`, [id]
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Account not found' });
-    res.json({ profile: { ...rows[0], role } });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// PATCH /api/auth/profile  body: { full_name?, contact_number? }  (email and role cannot be changed here)
-router.patch('/profile', requireLogin, blockIfMustChangePassword, async (req, res, next) => {
-  try {
-    const { id, role } = req.session.user;
-    const { table, idCol } = ROLES[role];
-    const { rows } = await pool.query(
-      `SELECT full_name, contact_number FROM ${table} WHERE ${idCol} = $1`, [id]
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Account not found' });
-
-    const b = req.body;
-    const fullName = b.full_name !== undefined ? String(b.full_name).trim() : rows[0].full_name;
-    const contact = b.contact_number !== undefined
-      ? String(b.contact_number || '').trim() || null : rows[0].contact_number;
-
-    if (!fullName || fullName.length > 100) {
-      return res.status(400).json({ error: 'Full name is required (max 100 characters)' });
+//get the logged-in user's own details from their role's table
+router.get(
+  "/profile",
+  requireLogin,
+  blockIfMustChangePassword,
+  async (req, res, next) => {
+    try {
+      const { id, role } = req.session.user;
+      const { table, idCol } = ROLES[role];
+      const { rows } = await pool.query(
+        `SELECT full_name, email, contact_number, created_at FROM ${table} WHERE ${idCol} = $1`,
+        [id],
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Account not found" });
+      res.json({ profile: { ...rows[0], role } });
+    } catch (err) {
+      next(err);
     }
-    if (contact && !isValidContact(contact)) {
-      return res.status(400).json({ error: 'Contact number can only contain digits, spaces, + - ( )' });
+  },
+);
+
+//edit your own name and contact number, then refresh the name in the session
+router.patch(
+  "/profile",
+  requireLogin,
+  blockIfMustChangePassword,
+  async (req, res, next) => {
+    try {
+      const { id, role } = req.session.user;
+      const { table, idCol } = ROLES[role];
+      const { rows } = await pool.query(
+        `SELECT full_name, contact_number FROM ${table} WHERE ${idCol} = $1`,
+        [id],
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Account not found" });
+
+      //use the new name and contact number if sent, otherwise keep the current ones
+      const b = req.body;
+      const fullName =
+        b.full_name !== undefined
+          ? String(b.full_name).trim()
+          : rows[0].full_name;
+      const contact =
+        b.contact_number !== undefined
+          ? String(b.contact_number || "").trim() || null
+          : rows[0].contact_number;
+
+      //name is required (max 100 characters) and the contact number must use allowed characters
+      if (!fullName || fullName.length > 100) {
+        return res
+          .status(400)
+          .json({ error: "Full name is required (max 100 characters)" });
+      }
+      if (contact && !isValidContact(contact)) {
+        return res
+          .status(400)
+          .json({
+            error: "Contact number can only contain digits, spaces, + - ( )",
+          });
+      }
+
+      await pool.query(
+        `UPDATE ${table} SET full_name = $1, contact_number = $2 WHERE ${idCol} = $3`,
+        [fullName, contact, id],
+      );
+
+      //update the name stored in the session too, so the header shows it right away
+      req.session.user.name = fullName;
+      res.json({ ok: true, user: req.session.user });
+    } catch (err) {
+      next(err);
     }
+  },
+);
 
-    await pool.query(
-      `UPDATE ${table} SET full_name = $1, contact_number = $2 WHERE ${idCol} = $3`,
-      [fullName, contact, id]
-    );
-    req.session.user.name = fullName;
-    res.json({ ok: true, user: req.session.user });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// POST /api/auth/change-password  body: { current_password, new_password }
-// On success the user is logged out and must log in again with the new password.
-router.post('/change-password', requireLogin, async (req, res, next) => {
+//change your password after checking the current one, then log out so you sign in again
+router.post("/change-password", requireLogin, async (req, res, next) => {
   try {
+    //check both passwords are sent, the new one is strong, and it differs from the old one
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) {
-      return res.status(400).json({ error: 'Current and new password are required' });
+      return res
+        .status(400)
+        .json({ error: "Current and new password are required" });
     }
-    if (!isStrongPassword(new_password)) return res.status(400).json({ error: PASSWORD_RULE });
+    if (!isStrongPassword(new_password))
+      return res.status(400).json({ error: PASSWORD_RULE });
     if (current_password === new_password) {
-      return res.status(400).json({ error: 'New password must be different from the current password' });
+      return res
+        .status(400)
+        .json({
+          error: "New password must be different from the current password",
+        });
     }
 
     const { id, role } = req.session.user;
     const { table, idCol } = ROLES[role];
     const { rows } = await pool.query(
-      `SELECT password_hash FROM ${table} WHERE ${idCol} = $1`, [id]
+      `SELECT password_hash FROM ${table} WHERE ${idCol} = $1`,
+      [id],
     );
-    if (!rows[0] || !(await bcrypt.compare(String(current_password), rows[0].password_hash))) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+    if (
+      !rows[0] ||
+      !(await bcrypt.compare(String(current_password), rows[0].password_hash))
+    ) {
+      return res.status(401).json({ error: "Current password is incorrect" });
     }
 
+    //hash the new password, save it and clear the forced-change flag
     const hash = await bcrypt.hash(new_password, 10);
     await pool.query(
       `UPDATE ${table} SET password_hash = $1, must_change_password = FALSE WHERE ${idCol} = $2`,
-      [hash, id]
+      [hash, id],
     );
+
+    //end the session and clear the cookie, then tell the page it was logged out
     req.session.destroy(() => {
-      res.clearCookie('connect.sid');
+      res.clearCookie("connect.sid");
       res.json({ ok: true, logged_out: true });
     });
   } catch (err) {
@@ -223,4 +313,5 @@ router.post('/change-password', requireLogin, async (req, res, next) => {
   }
 });
 
+//share the router with server.js
 module.exports = router;

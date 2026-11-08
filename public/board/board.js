@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//board/board.js - board script, redraws the now serving and next up numbers of every service every 5 seconds
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,24 +12,35 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
-
-/* ---------- Everything else waits until the page is ready ---------- */
+function el(tag, className, text) {
+  var node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
 
 document.addEventListener('DOMContentLoaded', function () {
-  var REFRESH_SECONDS = 5;   // how often the board asks the server for the latest queue
-  var FAILS_BEFORE_LOST = 2; // this many failed refreshes in a row = "Connection lost"
+  setTheme(startTheme);
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTheme(button.dataset.themeSet);
+    });
+  });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  var REFRESH_SECONDS = 5;
+  var FAILS_BEFORE_LOST = 2;
 
   var boardsEl = document.getElementById('boards');
   var emptyMessage = document.getElementById('emptyMessage');
@@ -43,40 +52,27 @@ document.addEventListener('DOMContentLoaded', function () {
   var clockTime = document.getElementById('clockTime');
   var fullscreenButton = document.getElementById('fullscreenButton');
 
-  var lastData = null;        // the last good answer from the server
-  var lastUpdatedAt = null;   // when we got it
+  var lastData = null;
+  var lastUpdatedAt = null;
   var failedInARow = 0;
-  var timeZone = undefined;   // the clinic's time zone, known after the first answer
-  var previouslyServing = {}; // used to announce newly called numbers
-
-  /* ---------- Theme buttons ---------- */
-
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Full screen ---------- */
+  var timeZone = undefined;
+  var previouslyServing = {};
 
   if (!document.documentElement.requestFullscreen) {
-    fullscreenButton.hidden = true; // e.g. iPhones
+    fullscreenButton.hidden = true;
   }
 
   fullscreenButton.addEventListener('click', function () {
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else {
-      document.documentElement.requestFullscreen().catch(function () { /* the browser said no */ });
+      document.documentElement.requestFullscreen().catch(function () { });
     }
   });
 
   document.addEventListener('fullscreenchange', function () {
     fullscreenButton.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
   });
-
-  /* ---------- Clock (shown in the clinic's time zone) ---------- */
 
   function updateClock() {
     var now = new Date();
@@ -87,8 +83,6 @@ document.addEventListener('DOMContentLoaded', function () {
       hour: 'numeric', minute: '2-digit', timeZone: timeZone
     });
   }
-
-  /* ---------- "Last updated" line ---------- */
 
   function updateLastUpdated() {
     if (!lastUpdatedAt) return;
@@ -103,18 +97,6 @@ document.addEventListener('DOMContentLoaded', function () {
     footer.classList.toggle('is-stale', failedInARow >= FAILS_BEFORE_LOST);
   }
 
-  /* ---------- Small helpers for building the page ---------- */
-
-  // el('p', 'board-label', 'Now serving') -> <p class="board-label">Now serving</p>
-  // Text is always added with textContent, so nothing typed by an admin can inject HTML.
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  // "08:00:00" -> "8:00 AM"
   function formatTime(value) {
     var parts = String(value).split(':');
     var hour = Number(parts[0]);
@@ -122,9 +104,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return (hour % 12 || 12) + ':' + parts[1] + ' ' + suffix;
   }
 
-  /* ---------- Drawing one service ---------- */
-
-  // What the board shows: open, paused or closed. Outside opening hours counts as closed.
   function boardState(service) {
     if (service.state === 'open' && service.unavailable_reason === 'Outside opening hours') return 'closed';
     return service.state;
@@ -175,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
       body.appendChild(list);
     } else {
       body.appendChild(el('p', 'board-label', 'Nobody serving'));
-      var dash = el('div', 'board-number is-empty', '–'); // a dash, not a ticket number
+      var dash = el('div', 'board-number is-empty', '–');
       dash.setAttribute('aria-label', 'No ticket is being served');
       body.appendChild(dash);
     }
@@ -194,13 +173,11 @@ document.addEventListener('DOMContentLoaded', function () {
     body.appendChild(next);
   }
 
-  /* ---------- Drawing the whole board ---------- */
-
   function draw() {
     if (!lastData) return;
     var lost = failedInARow >= FAILS_BEFORE_LOST;
 
-    boardsEl.textContent = ''; // clear the old panels
+    boardsEl.textContent = '';
     lastData.services.forEach(function (service) {
       boardsEl.appendChild(drawService(service, lost));
     });
@@ -208,14 +185,12 @@ document.addEventListener('DOMContentLoaded', function () {
     loadingMessage.hidden = true;
   }
 
-  // Tell screen readers when a new number is called ("Now serving G-011 in Room 1")
   function announceNewNumbers(data) {
     var now = {};
     data.services.forEach(function (service) {
       service.serving.forEach(function (item) {
         var key = service.service_id + ':' + item.ticket_label;
         now[key] = true;
-        // lastUpdatedAt is empty on the very first load, so nothing is announced just for opening the page
         if (!previouslyServing[key] && lastUpdatedAt) {
           announcer.textContent = 'Now serving ' + item.ticket_label + (item.room ? ' in ' + item.room : '') + '.';
         }
@@ -224,10 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
     previouslyServing = now;
   }
 
-  /* ---------- Asking the server ---------- */
-
   function refresh() {
-    // Give up on a request that hangs, so a bad connection shows as "Connection lost".
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 8000);
 
@@ -236,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!res.ok) throw new Error('bad status');
         return res.json();
       })
+
       .then(function (data) {
         announceNewNumbers(data);
         lastData = data;
@@ -249,6 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateClock();
         updateLastUpdated();
       })
+
       .catch(function () {
         failedInARow++;
         if (!lastData) {
@@ -257,20 +231,19 @@ document.addEventListener('DOMContentLoaded', function () {
         draw();
         updateLastUpdated();
       })
+
       .then(function () {
         clearTimeout(timer);
       });
   }
 
-  /* ---------- Start ---------- */
-
   updateClock();
   refresh();
   setInterval(refresh, REFRESH_SECONDS * 1000);
+
   setInterval(updateClock, 1000);
   setInterval(updateLastUpdated, 1000);
 
-  // Coming back to the tab: refresh at once instead of waiting for the next tick.
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) refresh();
   });

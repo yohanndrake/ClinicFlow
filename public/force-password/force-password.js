@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//force-password/force-password.js - forced password change script, the server blocks other pages until the new password is saved
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,35 +12,23 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
-
-/* ---------- Everything else waits until the page is ready ---------- */
+function homeFor(role) {
+  if (role === 'admin') return '/admin/dashboard.html';
+  if (role === 'staff') return '/staff/console.html';
+  return '/patient/home.html';
+}
 
 document.addEventListener('DOMContentLoaded', function () {
-  var form = document.getElementById('passwordForm');
-  var saveButton = document.getElementById('saveButton');
-  var formAlert = document.getElementById('formAlert');
-  var successPanel = document.getElementById('successPanel');
-
-  // Each field and the little red message under it
-  var fields = {
-    temporary: { input: document.getElementById('temporary'), error: document.getElementById('temporaryError') },
-    newPassword: { input: document.getElementById('newPassword'), error: document.getElementById('newPasswordError') },
-    confirm: { input: document.getElementById('confirm'), error: document.getElementById('confirmError') }
-  };
-
-  /* Theme buttons */
   setTheme(startTheme);
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -50,14 +36,28 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* Logout is the only other thing a person can do here */
-  document.getElementById('logoutButton').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
-      .then(function () { window.location.href = '/login/login.html'; });
-  });
+  var logoutButton = document.getElementById('logoutButton');
+  if (logoutButton) {
+    logoutButton.addEventListener('click', function () {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .catch(function () { })
+        .then(function () { window.location.href = '/login/login.html'; });
+    });
+  }
+});
 
-  /* Show / Hide buttons (one for each password box) */
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.getElementById('passwordForm');
+  var saveButton = document.getElementById('saveButton');
+  var formAlert = document.getElementById('formAlert');
+  var successPanel = document.getElementById('successPanel');
+
+  var fields = {
+    temporary: { input: document.getElementById('temporary'), error: document.getElementById('temporaryError') },
+    newPassword: { input: document.getElementById('newPassword'), error: document.getElementById('newPasswordError') },
+    confirm: { input: document.getElementById('confirm'), error: document.getElementById('confirmError') }
+  };
+
   document.querySelectorAll('.show-hide').forEach(function (button) {
     button.addEventListener('click', function () {
       var input = document.getElementById(button.dataset.target);
@@ -66,14 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
       button.textContent = hidden ? 'Hide' : 'Show';
     });
   });
-
-  /* ---------- Does this person really need to be here? ---------- */
-
-  function homeFor(role) {
-    if (role === 'admin') return '/admin/dashboard.html';
-    if (role === 'staff') return '/staff/console.html';
-    return '/patient/home.html';
-  }
 
   fetch('/api/auth/me')
     .then(function (res) {
@@ -84,14 +76,12 @@ document.addEventListener('DOMContentLoaded', function () {
       return res.json();
     })
     .then(function (data) {
-      // Already on a normal password: nothing to do here
       if (data && !data.user.mustChangePassword) {
         window.location.replace(homeFor(data.user.role));
       }
     })
-    .catch(function () { /* the form still works */ });
 
-  /* ---------- Error helpers ---------- */
+    .catch(function () { });
 
   function showFieldError(name, message) {
     var field = fields[name];
@@ -115,7 +105,6 @@ document.addEventListener('DOMContentLoaded', function () {
     formAlert.hidden = false;
   }
 
-  // Put the cursor in the first field that has a problem
   function focusFirstError() {
     var order = ['temporary', 'newPassword', 'confirm'];
     for (var i = 0; i < order.length; i++) {
@@ -131,8 +120,6 @@ document.addEventListener('DOMContentLoaded', function () {
     saveButton.textContent = 'Save';
   }
 
-  /* ---------- Save ---------- */
-
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     clearErrors();
@@ -142,7 +129,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var confirm = fields.confirm.input.value;
     var valid = true;
 
-    // These are the same rules the server checks, so people see problems before the request is sent.
     if (!temporary) {
       showFieldError('temporary', 'Enter your temporary password.');
       valid = false;
@@ -172,7 +158,6 @@ document.addEventListener('DOMContentLoaded', function () {
     saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
 
-    // The temporary password is the "current" password as far as the server is concerned.
     fetch('/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -183,11 +168,11 @@ document.addEventListener('DOMContentLoaded', function () {
           return { status: res.status, data: data };
         });
       })
+
       .then(function (result) {
         var message = result.data.error || '';
 
         if (result.status === 200) {
-          // The server has logged the person out, so show the message and the login button.
           form.hidden = true;
           successPanel.hidden = false;
           successPanel.querySelector('a').focus();
@@ -196,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (result.status === 401 && /current password/i.test(message)) {
           showFieldError('temporary', 'Your temporary password is incorrect.');
         } else if (result.status === 401) {
-          window.location.replace('/login/login.html'); // the login expired
+          window.location.replace('/login/login.html');
           return;
         } else if (result.status === 400 && /different/i.test(message)) {
           showFieldError('newPassword', 'The new password must be different from your temporary password.');

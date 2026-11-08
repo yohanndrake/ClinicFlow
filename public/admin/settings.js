@@ -1,65 +1,12 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//admin/settings.js - settings script, clinic name, time zone, near alert, grace period and default travel time
 document.addEventListener('DOMContentLoaded', function () {
-  var userButton = document.getElementById('userButton');
   var userMenu = document.getElementById('userMenu');
   var form = document.getElementById('settingsForm');
 
-  var timeZone = undefined;   // the clinic's time zone, used for the clock
+  var timeZone = undefined;
   var toastTimer = null;
 
-  // The standard values used by "Reset to defaults"
   var DEFAULTS = { near_threshold: 3, grace_minutes: 10, default_travel_minutes: 15 };
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  // "Clinic Admin" -> "CA"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
 
   function updateClock() {
     var options = {
@@ -70,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
       options.timeZone = timeZone;
       byId('clock').textContent = new Date().toLocaleString('en-US', options);
     } catch (err) {
-      delete options.timeZone; // an unknown time zone: fall back to this device's
+      delete options.timeZone;
       byId('clock').textContent = new Date().toLocaleString('en-US', options);
     }
   }
@@ -84,19 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
     toastTimer = setTimeout(function () { box.hidden = true; }, 4000);
   }
 
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
   document.addEventListener('click', function (event) {
     if (!userMenu.contains(event.target)) closeMenu();
   });
@@ -106,35 +40,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('logoutButton').addEventListener('click', function () {
     fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
+      .catch(function () { })
       .then(function () { window.location.href = '/login/login.html'; });
   });
-
-  /* ---------- Talking to the server ---------- */
-
-  // Sends a request and resolves to { status, data }. A logged-out person goes to the login page.
-  function send(method, url, body) {
-    var options = { method: method, cache: 'no-store' };
-    if (body !== undefined) {
-      options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(body);
-    }
-    return fetch(url, options).then(function (res) {
-      if (res.status === 401) {
-        window.location.replace('/login/login.html');
-        throw new Error('not logged in');
-      }
-      if (res.status === 403) {
-        window.location.replace('/error/error.html?code=403');
-        throw new Error('not allowed');
-      }
-      return res.json().catch(function () { return {}; }).then(function (json) {
-        return { status: res.status, data: json };
-      });
-    });
-  }
-
-  /* ---------- The form ---------- */
 
   function fillForm(settings) {
     byId('sName').value = settings.clinic_name;
@@ -150,15 +58,6 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('pageAlert').hidden = true;
   }
 
-  function fieldError(inputId, message) {
-    var input = byId(inputId);
-    input.classList.add('is-error');
-    byId(inputId + 'Error').textContent = message;
-    byId(inputId + 'Error').hidden = false;
-    return input;
-  }
-
-  // True when the text is a whole number of at least `min`
   function wholeNumber(text, min) {
     return /^\d+$/.test(text) && Number(text) >= min;
   }
@@ -172,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // Suggestions for the time zone box (not every browser has this function)
   if (Intl.supportedValuesOf) {
     Intl.supportedValuesOf('timeZone').forEach(function (zone) {
       var option = document.createElement('option');
@@ -205,7 +103,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!firstBad) firstBad = input;
     }
 
-    // The same rules the server checks, so people see the problem before sending
     if (!name) bad('sName', 'Clinic name is required.');
     if (!zone || !validZone(zone)) bad('sZone', 'Enter a valid time zone, for example Asia/Manila.');
     if (!wholeNumber(near, 1)) bad('sNear', 'Enter a whole number, 1 or more.');
@@ -244,8 +141,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function () { byId('saveButton').disabled = false; });
   });
 
-  /* ---------- Start ---------- */
-
   send('GET', '/api/auth/me')
     .then(function (result) {
       var user = result.data.user;
@@ -272,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fillForm(settings);
         form.hidden = false;
         updateClock();
+
         setInterval(updateClock, 30 * 1000);
       });
     })

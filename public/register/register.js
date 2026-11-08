@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//register/register.js - register page script, checks the form, creates the patient account and logs them in
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,20 +12,24 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
-
-/* ---------- Everything else waits until the page is ready ---------- */
+document.addEventListener('DOMContentLoaded', function () {
+  setTheme(startTheme);
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTheme(button.dataset.themeSet);
+    });
+  });
+});
 
 document.addEventListener('DOMContentLoaded', function () {
   var form = document.getElementById('registerForm');
@@ -36,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var menuButton = document.getElementById('menuButton');
   var siteMenu = document.getElementById('siteMenu');
 
-  // Each field and the little red message under it
   var fields = {
     fullName: { input: document.getElementById('fullName'), error: document.getElementById('fullNameError') },
     email: { input: document.getElementById('email'), error: document.getElementById('emailError') },
@@ -45,21 +46,11 @@ document.addEventListener('DOMContentLoaded', function () {
     confirm: { input: document.getElementById('confirm'), error: document.getElementById('confirmError') }
   };
 
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* Phone menu */
   menuButton.addEventListener('click', function () {
     var open = siteMenu.classList.toggle('is-open');
     menuButton.setAttribute('aria-expanded', String(open));
   });
 
-  /* Show / Hide buttons (one for each password box) */
   document.querySelectorAll('.show-hide').forEach(function (button) {
     button.addEventListener('click', function () {
       var input = document.getElementById(button.dataset.target);
@@ -69,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* Already logged in? There is nothing to register, go to the home screen. */
   function homeFor(user) {
     if (user.mustChangePassword) return '/force-password/force-password.html';
     if (user.role === 'admin') return '/admin/dashboard.html';
@@ -82,9 +72,8 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function (data) {
       if (data && data.user) window.location.replace(homeFor(data.user));
     })
-    .catch(function () { /* server not reachable: just show the form */ });
+    .catch(function () { });
 
-  /* Error helpers */
   function showFieldError(name, message) {
     var field = fields[name];
     field.input.classList.add('is-error');
@@ -107,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function () {
     formAlert.hidden = false;
   }
 
-  // Put the cursor in the first field that has a problem
   function focusFirstError() {
     var order = ['fullName', 'email', 'contact', 'password', 'confirm'];
     for (var i = 0; i < order.length; i++) {
@@ -123,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function () {
     registerButton.textContent = 'Register';
   }
 
-  /* Submit */
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     clearErrors();
@@ -135,7 +122,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var confirm = fields.confirm.input.value;
     var valid = true;
 
-    // These are the same rules the server checks, so people see problems before the request is sent.
     if (!fullName) {
       showFieldError('fullName', 'Enter your full name.');
       valid = false;
@@ -186,9 +172,9 @@ document.addEventListener('DOMContentLoaded', function () {
           return { status: res.status, data: data };
         });
       })
+
       .then(function (result) {
         if (result.status === 201) {
-          // Registering also logs the person in.
           window.location.href = '/patient/home.html';
           return;
         }
@@ -206,6 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
         focusFirstError();
         resetButton();
       })
+
       .catch(function () {
         showAlert("Can't reach the server. Check your connection and try again.");
         resetButton();

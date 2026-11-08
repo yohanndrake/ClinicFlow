@@ -1,11 +1,9 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
+//profile/profile.js - profile script, loads the account details and saves the name and contact number
 function savedTheme() {
   try {
     return localStorage.getItem('cf-theme');
   } catch (err) {
-    return null; // storage can be blocked in private mode
+    return null;
   }
 }
 
@@ -14,28 +12,80 @@ function setTheme(theme) {
   try {
     localStorage.setItem('cf-theme', theme);
   } catch (err) {
-    // not saving is fine, the theme still changes for this visit
   }
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-// First visit: follow the device setting.
 var startTheme = savedTheme() ||
   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.setAttribute('data-theme', startTheme);
 
+function initials(name) {
+  var words = String(name).trim().split(/\s+/);
+  var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
+  return letters.toUpperCase();
+}
 
-/* ---------- Everything else waits until the page is ready ---------- */
+function homeFor(role) {
+  if (role === 'admin') return '/admin/dashboard.html';
+  if (role === 'staff') return '/staff/console.html';
+  return '/patient/home.html';
+}
+
+function closeMenu() {
+  var userMenu = document.getElementById('userMenu');
+  var userButton = document.getElementById('userButton');
+  if (!userMenu || !userButton) return;
+  userMenu.hidden = true;
+  userButton.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  setTheme(startTheme);
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTheme(button.dataset.themeSet);
+    });
+  });
+
+  var userButton = document.getElementById('userButton');
+  var userMenu = document.getElementById('userMenu');
+  if (userButton && userMenu) {
+    userButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var open = userMenu.hidden;
+      userMenu.hidden = !open;
+      userButton.setAttribute('aria-expanded', String(open));
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!userMenu.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeMenu();
+        userButton.focus();
+      }
+    });
+  }
+
+  var logoutButton = document.getElementById('logoutButton');
+  if (logoutButton) {
+    logoutButton.addEventListener('click', function () {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .catch(function () { })
+        .then(function () { window.location.href = '/login/login.html'; });
+    });
+  }
+});
 
 document.addEventListener('DOMContentLoaded', function () {
   var form = document.getElementById('profileForm');
   var saveButton = document.getElementById('saveButton');
   var formAlert = document.getElementById('formAlert');
   var toast = document.getElementById('toast');
-  var userButton = document.getElementById('userButton');
-  var userMenu = document.getElementById('userMenu');
 
   var fields = {
     fullName: { input: document.getElementById('fullName'), error: document.getElementById('fullNameError') },
@@ -45,61 +95,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var roleNames = { patient: 'Patient', staff: 'Staff', admin: 'Admin' };
   var toastTimer = null;
 
-  /* Theme buttons */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-
-  /* ---------- Where each kind of user starts ---------- */
-
-  function homeFor(role) {
-    if (role === 'admin') return '/admin/dashboard.html';
-    if (role === 'staff') return '/staff/console.html';
-    return '/patient/home.html';
-  }
-
-  // "Maria Santos" -> "MS"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
-
-  // Click anywhere else, or press Escape, to close it
-  document.addEventListener('click', function (event) {
-    if (!userMenu.contains(event.target)) closeMenu();
-  });
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeMenu();
-      userButton.focus();
-    }
-  });
-
-  document.getElementById('logoutButton').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
-      .then(function () { window.location.href = '/login/login.html'; });
-  });
-
-  /* Show the person's name and initials in the header and above the form */
   function showName(name, role) {
     document.getElementById('headerName').textContent = name;
     document.getElementById('headerInitials').textContent = initials(name);
@@ -107,8 +102,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('whoName').textContent = name;
     document.getElementById('whoRole').textContent = roleNames[role] || role;
   }
-
-  /* ---------- Error helpers ---------- */
 
   function showFieldError(name, message) {
     var field = fields[name];
@@ -138,8 +131,6 @@ document.addEventListener('DOMContentLoaded', function () {
     toastTimer = setTimeout(function () { toast.hidden = true; }, 4000);
   }
 
-  /* ---------- Load the person's details ---------- */
-
   var role = 'patient';
 
   fetch('/api/auth/me')
@@ -152,10 +143,10 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function (data) {
       if (!data) return null;
+
       role = data.user.role;
       document.getElementById('backButton').href = homeFor(role);
 
-      // Someone on a temporary password must change it first
       if (data.user.mustChangePassword) {
         window.location.replace('/force-password/force-password.html');
         return null;
@@ -170,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function (data) {
       if (!data) return;
       var profile = data.profile;
+
       fields.fullName.input.value = profile.full_name;
       fields.contact.input.value = profile.contact_number || '';
       document.getElementById('email').value = profile.email;
@@ -180,12 +172,11 @@ document.addEventListener('DOMContentLoaded', function () {
       fields.contact.input.disabled = false;
       saveButton.disabled = false;
     })
+
     .catch(function () {
       document.getElementById('whoName').textContent = '';
       showAlert("Can't load your details. Check your connection and refresh the page.");
     });
-
-  /* ---------- Save ---------- */
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -222,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return { status: res.status, data: data };
         });
       })
+
       .then(function (result) {
         if (result.status === 200) {
           showName(fullName, role);
@@ -237,6 +229,7 @@ document.addEventListener('DOMContentLoaded', function () {
           showAlert(result.data.error || 'Something went wrong. Please try again.');
         }
       })
+
       .catch(function () {
         showAlert("Can't reach the server. Check your connection and try again.");
       })

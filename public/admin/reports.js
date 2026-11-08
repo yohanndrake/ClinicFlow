@@ -1,83 +1,14 @@
-/* ---------- Light / dark theme ---------- */
-// This part runs straight away (the script is in the <head>) so the page never flashes the wrong theme.
-
-function savedTheme() {
-  try {
-    return localStorage.getItem('cf-theme');
-  } catch (err) {
-    return null; // storage can be blocked in private mode
-  }
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem('cf-theme', theme);
-  } catch (err) {
-    // not saving is fine, the theme still changes for this visit
-  }
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
-  });
-}
-
-// First visit: follow the device setting.
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
-
-
-/* ---------- Everything else waits until the page is ready ---------- */
-
+//admin/reports.js - reports script, date range and service filter, charts, tables and csv export
 document.addEventListener('DOMContentLoaded', function () {
-  var userButton = document.getElementById('userButton');
   var userMenu = document.getElementById('userMenu');
   var rangeSelect = document.getElementById('range');
   var serviceSelect = document.getElementById('service');
 
-  var timeZone = undefined;   // the clinic's time zone, known after the board answers
-  var report = null;          // the latest report
-  var charts = {};            // Chart.js objects, so they can be destroyed before redrawing
-  var requestNumber = 0;      // ignore old answers if the filters changed meanwhile
+  var timeZone = undefined;
+  var report = null;
+  var charts = {};
+  var requestNumber = 0;
 
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  /* Theme buttons (the charts are redrawn so their colors follow the theme) */
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-      if (report) drawCharts();
-    });
-  });
-
-  /* ---------- Small helpers ---------- */
-
-  // el('p', 'note', 'Hello') -> <p class="note">Hello</p>   (text goes in with textContent, never as HTML)
-  function el(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  // "Clinic Admin" -> "CA"
-  function initials(name) {
-    var words = String(name).trim().split(/\s+/);
-    var letters = words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '');
-    return letters.toUpperCase();
-  }
-
-  // "2026-10-23" -> "Oct 23"
-  function shortDay(isoDate) {
-    var parts = String(isoDate).split('-');
-    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[Number(parts[1]) - 1] + ' ' + Number(parts[2]);
-  }
-
-  // 13 -> "1 PM"
   function hourText(hour) {
     return (hour % 12 || 12) + (hour >= 12 ? ' PM' : ' AM');
   }
@@ -86,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return minutes === null || minutes === undefined ? '—' : Math.round(minutes) + ' min';
   }
 
-  // The clinic's date, N days ago, as YYYY-MM-DD
   function daysAgo(days) {
     var parts = new Intl.DateTimeFormat('en-CA', {
       year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timeZone
@@ -105,23 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function cssColor(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  }
-
-  /* ---------- User menu ---------- */
-
-  function closeMenu() {
-    userMenu.hidden = true;
-    userButton.setAttribute('aria-expanded', 'false');
-  }
-
-  userButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    var open = userMenu.hidden;
-    userMenu.hidden = !open;
-    userButton.setAttribute('aria-expanded', String(open));
-  });
   document.addEventListener('click', function (event) {
     if (!userMenu.contains(event.target)) closeMenu();
   });
@@ -131,13 +44,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   byId('logoutButton').addEventListener('click', function () {
     fetch('/api/auth/logout', { method: 'POST' })
-      .catch(function () { /* leave the page either way */ })
+      .catch(function () { })
       .then(function () { window.location.href = '/login/login.html'; });
   });
 
-  /* ---------- Talking to the server ---------- */
-
-  // Gets JSON. Logged-out people go to the login page, people without access to the error page.
   function getJson(url) {
     return fetch(url, { cache: 'no-store' }).then(function (res) {
       if (res.status === 401) {
@@ -155,20 +65,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------- Filters and the export link ---------- */
-
   function filterQuery() {
     var query = 'from=' + daysAgo(Number(rangeSelect.value)) + '&to=' + daysAgo(0);
     if (serviceSelect.value) query += '&service_id=' + encodeURIComponent(serviceSelect.value);
     return query;
   }
 
-  // The CSV is a normal download from the server (the login cookie goes along)
   function updateExportLink() {
     byId('exportLink').href = '/api/admin/reports/export?' + filterQuery();
   }
-
-  /* ---------- Drawing ---------- */
 
   function drawStats() {
     var s = report.status_breakdown;
@@ -236,7 +141,6 @@ document.addEventListener('DOMContentLoaded', function () {
       options: base('Minutes', false)
     });
 
-    // Peak hours: only the hours people actually joined in, plus a little around them
     var hours = report.peak_hours;
     var used = hours.filter(function (h) { return h.patients > 0; });
     var first = used.length ? Math.max(0, used[0].hour - 1) : 6;
@@ -248,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function () {
       options: base('Patients', true)
     });
 
-    // Status breakdown: the same status colors used everywhere else in the app
     var statuses = [
       ['Completed', report.status_breakdown.completed, '--cf-completed-fg'],
       ['Waiting', report.status_breakdown.waiting, '--cf-waiting-fg'],
@@ -264,7 +167,6 @@ document.addEventListener('DOMContentLoaded', function () {
       options: { responsive: true, maintainAspectRatio: false, animation: false, cutout: '62%', plugins: { legend: { display: false } } }
     });
 
-    // The legend is plain HTML so the numbers are readable without hovering
     var legend = byId('statusLegend');
     legend.textContent = '';
     statuses.forEach(function (s, i) {
@@ -276,8 +178,6 @@ document.addEventListener('DOMContentLoaded', function () {
       legend.appendChild(item);
     });
   }
-
-  /* ---------- Loading ---------- */
 
   function load() {
     var mine = ++requestNumber;
@@ -319,8 +219,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   byId('toolbar').addEventListener('submit', function (event) { event.preventDefault(); });
 
-  /* ---------- Start ---------- */
-
   getJson('/api/auth/me')
     .then(function (result) {
       var user = result.user;
@@ -341,14 +239,15 @@ document.addEventListener('DOMContentLoaded', function () {
             timeZone = board.time_zone;
           }
         })
-        .catch(function () { /* dates just use this device's time zone */ })
+        .catch(function () { })
         .then(function () {
           updateClock();
+
           setInterval(updateClock, 30 * 1000);
           return getJson('/api/admin/services');
         })
+
         .then(function (result) {
-          // A service filter only appears when there is more than one service
           if (result.services.length > 1) {
             result.services.forEach(function (s) {
               var option = el('option', '', s.service_name);
@@ -360,5 +259,5 @@ document.addEventListener('DOMContentLoaded', function () {
           return load();
         });
     })
-    .catch(function () { /* redirects are already happening */ });
+    .catch(function () { });
 });
