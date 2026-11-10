@@ -18,8 +18,11 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --env-file=.env server/server.js",
+    "start": "node --env-file-if-exists=.env server/server.js",
     "dev": "node --watch --env-file=.env server/server.js"
+  },
+  "engines": {
+    "node": "24.x"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

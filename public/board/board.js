@@ -1,26 +1,49 @@
-//board/board.js - board script, redraws the now serving and next up numbers of every service every 5 seconds
-function savedTheme() {
+//board/board.js - board script, theme from ?theme= or the T key (dark by default), redraws the now serving and next up numbers every 5 seconds
+(function () {
+  var fromUrl = new URLSearchParams(location.search).get('theme');
+  if (fromUrl !== 'light' && fromUrl !== 'dark') fromUrl = null;
+  var saved = null;
   try {
-    return localStorage.getItem('cf-theme');
+    saved = localStorage.getItem('cf-board-theme');
   } catch (err) {
-    return null;
   }
-}
+  document.documentElement.setAttribute('data-theme', fromUrl || saved || 'dark');
+  if (fromUrl) {
+    try {
+      localStorage.setItem('cf-board-theme', fromUrl);
+    } catch (err) {
+    }
+  }
+})();
 
-function setTheme(theme) {
+//apply a theme, remember it, and mark the matching switch button as pressed
+function setBoardTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   try {
-    localStorage.setItem('cf-theme', theme);
+    localStorage.setItem('cf-board-theme', theme);
   } catch (err) {
   }
+  markThemeButtons();
+}
+
+function markThemeButtons() {
+  var theme = document.documentElement.getAttribute('data-theme');
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
 }
 
-var startTheme = savedTheme() ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', startTheme);
+document.addEventListener('keydown', function (e) {
+  if ((e.key || '').toLowerCase() !== 't' || e.ctrlKey || e.metaKey || e.altKey) return;
+  setBoardTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  markThemeButtons();
+  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
+    button.addEventListener('click', function () { setBoardTheme(button.dataset.themeSet); });
+  });
+});
 
 function el(tag, className, text) {
   var node = document.createElement(tag);
@@ -28,15 +51,6 @@ function el(tag, className, text) {
   if (text !== undefined) node.textContent = text;
   return node;
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-  setTheme(startTheme);
-  document.querySelectorAll('[data-theme-set]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      setTheme(button.dataset.themeSet);
-    });
-  });
-});
 
 document.addEventListener('DOMContentLoaded', function () {
   var REFRESH_SECONDS = 5;
@@ -110,9 +124,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function drawService(service, connectionLost) {
-    var card = el('section', 'cf-card cf-card-raised');
+    var card = el('section', 'cf-card service-card');
     var head = el('div', 'service-head');
-    head.appendChild(el('h2', '', service.service_name));
+    head.appendChild(el('h2', 'cf-board-label', service.service_name));
 
     var body = el('div', 'service-body');
     var state = boardState(service);
@@ -146,8 +160,8 @@ document.addEventListener('DOMContentLoaded', function () {
       body.appendChild(el('p', 'board-label', 'Now serving'));
       var list = el('div', 'serving-list');
       service.serving.forEach(function (item) {
-        var box = el('div', 'serving-item');
-        box.appendChild(el('div', 'board-number', item.ticket_label));
+        var box = el('div', 'serving-item cf-board-main');
+        box.appendChild(el('div', 'board-number cf-board-number', item.ticket_label));
         if (item.room) box.appendChild(el('p', 'board-room', item.room));
         list.appendChild(box);
       });
@@ -162,9 +176,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var next = el('div', 'next-up');
     if (service.next_up.length) {
       next.appendChild(el('h3', '', 'Next up'));
-      var nextList = el('div', 'next-list');
+      var nextList = el('div', 'next-list cf-board-next');
       service.next_up.forEach(function (label) {
-        nextList.appendChild(el('div', 'next-item', label));
+        nextList.appendChild(el('div', 'next-item cf-board-next-item', label));
       });
       next.appendChild(nextList);
     }

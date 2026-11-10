@@ -6,14 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Visit History - ClinicFlow</title>
 
-  <link rel="stylesheet" href="/patient/patient.css">
   <script src="/patient/patient.js"></script>
   <link rel="stylesheet" href="/patient/history.css">
   <script src="/patient/history.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+  <header class="site-header cf-panel cf-topbar">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg></span><span id="clinicName">ClinicFlow</span></a>
 
     <nav class="top-nav" aria-label="Patient pages">
       <a href="/patient/home.html">Home</a>
@@ -96,12 +95,12 @@
         <tbody id="visitRows"></tbody>
       </table>
 
-      <button type="button" class="cf-btn cf-btn-secondary cf-btn-block load-more" id="loadMore" hidden>Load more</button>
+      <button type="button" class="cf-btn cf-btn-outline cf-btn-block load-more" id="loadMore" hidden>Load more</button>
 
       <div class="pager" id="pager" hidden>
-        <button type="button" class="cf-btn cf-btn-secondary" id="prevButton">Previous</button>
+        <button type="button" class="cf-btn cf-btn-outline" id="prevButton">Previous</button>
         <span class="muted" id="pageInfo"></span>
-        <button type="button" class="cf-btn cf-btn-secondary" id="nextButton">Next</button>
+        <button type="button" class="cf-btn cf-btn-outline" id="nextButton">Next</button>
       </div>
 
       <div class="cf-card empty" id="empty" hidden>
@@ -120,11 +119,11 @@
       </div>
       <p class="detail-ticket" id="detailTicket"></p>
       <dl class="detail-rows" id="detailRows"></dl>
-      <button type="submit" class="cf-btn cf-btn-secondary cf-btn-block">Close</button>
+      <button type="submit" class="cf-btn cf-btn-outline cf-btn-block">Close</button>
     </form>
   </dialog>
 
-  <nav class="tab-bar" aria-label="Patient pages">
+  <nav class="tab-bar cf-tabs" aria-label="Patient pages">
     <a href="/patient/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
     <a href="/patient/take-number.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
     <a href="/patient/ticket.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>

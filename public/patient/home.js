@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!active) return;
 
     var badge = document.getElementById('ticketBadge');
-    badge.className = 'cf-badge cf-' + ticket.state;
+    badge.className = ticketBadgeClass(ticket.state);
+    paintTicketCard(document.getElementById('ticketSection'), ticket.state);
     badge.textContent = stateNames[ticket.state] || capitalize(ticket.state);
 
     document.getElementById('ticketNumber').textContent = ticket.ticket_label;
@@ -129,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
       number.dataset.label = 'Ticket';
       var statusCell = el('td');
       statusCell.dataset.label = 'Status';
-      statusCell.appendChild(el('span', 'cf-badge cf-' + status.css, status.label));
+      statusCell.appendChild(el('span', 'cf-badge ' + statusClass(status.css), status.label));
       var wait = el('td', '', minutesText(t.wait_minutes));
       wait.dataset.label = 'Wait time';
 

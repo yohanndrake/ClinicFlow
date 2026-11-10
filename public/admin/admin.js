@@ -16,6 +16,7 @@ function setTheme(theme) {
   document.querySelectorAll('[data-theme-set]').forEach(function (button) {
     button.setAttribute('aria-pressed', String(button.dataset.themeSet === theme));
   });
+  document.dispatchEvent(new Event('cf-theme-change'));
 }
 
 var startTheme = savedTheme() ||
@@ -31,6 +32,12 @@ function el(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+function statusClass(status) {
+  if (status === 'serving') return 'cf-called';
+  if (status === 'expired') return 'cf-cancelled';
+  return 'cf-' + status;
 }
 
 function capitalize(text) {
@@ -96,7 +103,7 @@ function shortDay(isoDate) {
   return months[Number(parts[1]) - 1] + ' ' + Number(parts[2]);
 }
 
-function cssColor(name) {
+function cfColor(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 

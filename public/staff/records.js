@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
     name.textContent = t.display_name || '—';
 
     var status = cell('Status');
-    status.appendChild(el('span', 'cf-badge cf-' + t.status, STATUS_NAMES[t.status] || capitalize(t.status)));
+    status.appendChild(el('span', 'cf-badge ' + statusClass(t.status), STATUS_NAMES[t.status] || capitalize(t.status)));
 
     var wait = cell('Wait time');
     wait.textContent = minutesText(t.wait_minutes);

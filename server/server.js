@@ -13,6 +13,9 @@ const { expireTickets } = require("./jobs");
 //creates the app
 const app = express();
 
+//trust the https proxy in front of the app on hosts like Render, so secure cookies work
+app.set("trust proxy", 1);
+
 //app reads the json
 app.use(express.json());
 
@@ -22,7 +25,13 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: "lax", maxAge: 1000 * 60 * 60 * 8 },
+    //secure "auto": the cookie is https-only when the site is on https, and still works on http locally
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: "auto",
+      maxAge: 1000 * 60 * 60 * 8,
+    },
   }),
 );
 

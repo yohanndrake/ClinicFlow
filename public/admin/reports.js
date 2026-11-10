@@ -1,4 +1,4 @@
-//admin/reports.js - reports script, date range and service filter, charts, tables and csv export
+//admin/reports.js - reports script, date range and service filter, charts and tables
 document.addEventListener('DOMContentLoaded', function () {
   var userMenu = document.getElementById('userMenu');
   var rangeSelect = document.getElementById('range');
@@ -71,10 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return query;
   }
 
-  function updateExportLink() {
-    byId('exportLink').href = '/api/admin/reports/export?' + filterQuery();
-  }
-
   function drawStats() {
     var s = report.status_breakdown;
     byId('statTotal').textContent = report.total_patients;
@@ -107,11 +103,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function drawCharts() {
-    var text = cssColor('--cf-text-muted');
-    var grid = cssColor('--cf-border');
-    var surface = cssColor('--cf-surface');
-    var bar = cssColor('--cf-accent-strong');
-    var line = cssColor('--cf-waiting-fg') || bar;
+    var text = getComputedStyle(byId('ticketsChart')).color;
+    var grid = cfColor('--cf-line');
+    var surface = cfColor('--cf-charcoal');
+    var bar = cfColor('--cf-lavender');
+    var lime = cfColor('--cf-lime');
+    function highlight(values, at) { return values.map(function (v, i) { return i === at ? lime : bar; }); }
+    function biggest(values) { return values.indexOf(Math.max.apply(null, values)); }
 
     function axes(yTitle, integer) {
       return {
@@ -131,13 +129,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     make('tickets', 'ticketsChart', {
       type: 'bar',
-      data: { labels: labels, datasets: [{ label: 'Patients', data: report.daily.map(function (d) { return d.patients; }), backgroundColor: bar, borderRadius: 4, maxBarThickness: 28 }] },
+      data: { labels: labels, datasets: [{ label: 'Patients', data: report.daily.map(function (d) { return d.patients; }), backgroundColor: highlight(report.daily.map(function (d) { return d.patients; }), biggest(report.daily.map(function (d) { return d.patients; }))), borderRadius: 4, maxBarThickness: 28 }] },
       options: base('Patients', true)
     });
 
     make('wait', 'waitChart', {
       type: 'line',
-      data: { labels: labels, datasets: [{ label: 'Average wait (min)', data: report.daily.map(function (d) { return d.avg_wait_minutes; }), borderColor: line, backgroundColor: line, borderWidth: 2, pointRadius: report.daily.length > 31 ? 0 : 4, spanGaps: false, tension: 0 }] },
+      data: { labels: labels, datasets: [{ label: 'Average wait (min)', data: report.daily.map(function (d) { return d.avg_wait_minutes; }), borderColor: bar, backgroundColor: bar, borderWidth: 2, pointRadius: report.daily.length > 31 ? 0 : 4, pointBackgroundColor: highlight(report.daily, report.daily.length - 1), pointBorderColor: highlight(report.daily, report.daily.length - 1), spanGaps: false, tension: 0 }] },
       options: base('Minutes', false)
     });
 
@@ -148,18 +146,18 @@ document.addEventListener('DOMContentLoaded', function () {
     var shownHours = hours.filter(function (h) { return h.hour >= first && h.hour <= last; });
     make('peak', 'peakChart', {
       type: 'bar',
-      data: { labels: shownHours.map(function (h) { return hourText(h.hour); }), datasets: [{ label: 'Patients', data: shownHours.map(function (h) { return h.patients; }), backgroundColor: bar, borderRadius: 4, maxBarThickness: 28 }] },
+      data: { labels: shownHours.map(function (h) { return hourText(h.hour); }), datasets: [{ label: 'Patients', data: shownHours.map(function (h) { return h.patients; }), backgroundColor: highlight(shownHours, biggest(shownHours.map(function (h) { return h.patients; }))), borderRadius: 4, maxBarThickness: 28 }] },
       options: base('Patients', true)
     });
 
     var statuses = [
-      ['Completed', report.status_breakdown.completed, '--cf-completed-fg'],
-      ['Waiting', report.status_breakdown.waiting, '--cf-waiting-fg'],
-      ['Serving', report.status_breakdown.serving, '--cf-serving-bg'],
-      ['Skipped', report.status_breakdown.skipped, '--cf-skipped-fg'],
-      ['Cancelled', report.status_breakdown.cancelled, '--cf-cancelled-fg']
+      ['Completed', report.status_breakdown.completed, '--cf-lime'],
+      ['Waiting', report.status_breakdown.waiting, '--cf-lavender'],
+      ['Serving', report.status_breakdown.serving, '--cf-near-bg'],
+      ['Skipped', report.status_breakdown.skipped, '--cf-line'],
+      ['Cancelled', report.status_breakdown.cancelled, '--cf-danger']
     ].filter(function (s) { return s[1] > 0; });
-    var colors = statuses.map(function (s) { return cssColor(s[2]); });
+    var colors = statuses.map(function (s) { return cfColor(s[2]); });
 
     make('status', 'statusChart', {
       type: 'doughnut',
@@ -179,10 +177,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  document.addEventListener('cf-theme-change', function () {
+    if (report && report.total_patients && window.Chart) drawCharts();
+  });
+
   function load() {
     var mine = ++requestNumber;
     byId('loading').hidden = false;
-    updateExportLink();
 
     return getJson('/api/admin/reports?' + filterQuery())
       .then(function (answer) {

@@ -29,6 +29,24 @@ function el(tag, className, text) {
   return node;
 }
 
+function statusClass(status) {
+  if (status === 'serving') return 'cf-called';
+  if (status === 'expired') return 'cf-cancelled';
+  return 'cf-' + status;
+}
+
+function ticketBadgeClass(state) {
+  if (state === 'waiting') return 'cf-badge cf-badge-ink';
+  if (state === 'called') return 'cf-badge cf-badge-ink-lime';
+  return 'cf-badge ' + statusClass(state);
+}
+
+function paintTicketCard(card, state) {
+  card.classList.remove('cf-card-lavender', 'cf-card-near', 'cf-card-lime');
+  var color = { waiting: 'cf-card-lavender', near: 'cf-card-near', called: 'cf-card-lime' }[state];
+  if (color) card.classList.add(color);
+}
+
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

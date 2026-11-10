@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cell('Email', u.email);
     cell('Contact', u.contact_number || '—');
     var status = cell('Status', '');
-    status.appendChild(el('span', 'cf-badge ' + (inactive ? 'cf-inactive' : 'cf-active'), capitalize(u.status)));
+    status.appendChild(el('span', 'cf-badge ' + (inactive ? 'cf-skipped' : 'cf-open'), capitalize(u.status)));
     cell(role === 'patient' ? 'Visits' : 'Assigned service', detailText(u));
     cell('Created', dayText(u.created_at));
 

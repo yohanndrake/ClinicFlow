@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('servingNumber').textContent = t.ticket_label;
     byId('servingName').textContent = t.display_name || 'Unnamed';
     byId('servingNote').textContent = 'Note: ' + (t.note || '—');
+    byId('servingTravel').textContent = 'Travel time: ' + travelText(t.travel_minutes);
     byId('arrivedButton').hidden = t.arrived;
     tickServing();
   }
@@ -182,6 +183,11 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('callNext').disabled = s.queue_status !== 'open' || !!data.current || !next;
   }
 
+  //a patient's travel time, or a dash for walk-ins who have none
+  function travelText(minutes) {
+    return minutes === null || minutes === undefined ? '—' : minutes + ' min';
+  }
+
   function drawRow(t) {
     var row = el('tr', t.is_deleted ? 'is-deleted' : '');
 
@@ -203,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cell('Waiting duration', t.status === 'waiting' || t.status === 'serving' ? minutesText(t.waiting_minutes) : '—');
     cell('Priority', t.priority ? 'Yes' : '—');
     cell('Arrived', t.arrived ? 'Yes' : '—');
+    cell('Travel', travelText(t.travel_minutes));
     cell('Note', t.note || '—');
 
     var actionsCell = el('td', 'actions-col');
@@ -545,6 +552,7 @@ document.addEventListener('DOMContentLoaded', function () {
       body.appendChild(group('', [
         ['Status', d.is_deleted ? 'Deleted' : STATUS_NAMES[d.status]],
         ['Priority', d.priority ? 'Yes' : '—'],
+        ['Travel time', travelText(d.travel_minutes)],
         ['Note', d.note || '—']
       ]));
       body.appendChild(group('Timestamps', [

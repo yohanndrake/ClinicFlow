@@ -6,14 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Queue Records - ClinicFlow</title>
 
-  <link rel="stylesheet" href="/staff/staff.css">
   <script src="/staff/staff.js"></script>
   <link rel="stylesheet" href="/staff/records.css">
   <script src="/staff/records.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+  <header class="site-header cf-panel cf-topbar">
+    <a class="brand" href="/staff/console.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg></span><span id="clinicName">ClinicFlow</span></a>
     <span class="console-label">Staff console</span>
 
     <div class="header-tools">
@@ -40,9 +39,9 @@
 
   <div class="shell">
 
-    <nav class="side-nav" aria-label="Staff pages">
-      <a href="/staff/console.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
-      <a href="/staff/records.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
+    <nav class="side-nav cf-panel" aria-label="Staff pages">
+      <a class="cf-nav-item" href="/staff/console.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Queue Console</span></a>
+      <a class="cf-nav-item" href="/staff/records.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h8"/></svg><span>Queue Records</span></a>
     </nav>
 
     <main class="page">
@@ -59,7 +58,6 @@
             <option value="0">Today</option>
             <option value="6" selected>Last 7 days</option>
             <option value="29">Last 30 days</option>
-            <option value="89">Last 90 days</option>
           </select>
         </div>
         <div class="filter">
@@ -96,12 +94,12 @@
           <tbody id="recordRows"></tbody>
         </table>
 
-        <button type="button" class="cf-btn cf-btn-secondary load-more" id="loadMore" hidden>Load more</button>
+        <button type="button" class="cf-btn cf-btn-outline load-more" id="loadMore" hidden>Load more</button>
 
         <div class="pager" id="pager" hidden>
-          <button type="button" class="cf-btn cf-btn-secondary" id="prevButton">Previous</button>
+          <button type="button" class="cf-btn cf-btn-outline" id="prevButton">Previous</button>
           <span class="muted" id="pageInfo"></span>
-          <button type="button" class="cf-btn cf-btn-secondary" id="nextButton">Next</button>
+          <button type="button" class="cf-btn cf-btn-outline" id="nextButton">Next</button>
         </div>
 
         <div class="cf-card empty" id="empty" hidden>
@@ -122,7 +120,7 @@
       <p class="muted" id="detailsLoading">Loading...</p>
       <div id="detailsBody"></div>
       <div class="dialog-actions">
-        <button type="button" class="cf-btn cf-btn-secondary" data-close>Close</button>
+        <button type="button" class="cf-btn cf-btn-outline" data-close>Close</button>
       </div>
     </div>
   </dialog>

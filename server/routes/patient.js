@@ -11,6 +11,7 @@ const {
   clinicNow,
   getSettings,
   ticketLabel,
+  isNear,
   unavailableReason,
   WAIT_MINUTES,
   SERVICE_MINUTES,
@@ -53,7 +54,11 @@ async function describeTicket(db, t, settings) {
 
   //the state patients see: near, called or expired, otherwise the ticket's own status
   let state = t.status;
-  if (t.status === "waiting" && ahead < settings.near_threshold) state = "near";
+  if (
+    t.status === "waiting" &&
+    isNear(ahead, t.avg_service_minutes, t.travel_minutes, settings.near_threshold)
+  )
+    state = "near";
   if (t.status === "serving") state = "called";
   if (t.expired) state = "expired";
 

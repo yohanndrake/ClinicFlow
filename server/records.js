@@ -1,5 +1,5 @@
 //records.js - the shared ticket search used by both the staff and admin "Queue Records"
-//pages (and the CSV exports). One query builder, so both roles behave the same.
+//pages. One query builder, so both roles behave the same.
 
 //imports: SQL pieces for wait and service minutes, the label maker and the id checker.
 const {
@@ -61,7 +61,7 @@ async function searchTickets(db, f) {
   );
   const { rows } = await db.query(
     `SELECT ${SELECT_COLUMNS} ${filter}
-      ORDER BY t.queue_date DESC, s.service_name, t.queue_number ASC LIMIT $7 OFFSET $8`,
+      ORDER BY t.queue_date DESC, t.queued_at DESC, t.ticket_id DESC LIMIT $7 OFFSET $8`,
     [...params, f.limit, f.offset],
   );
 

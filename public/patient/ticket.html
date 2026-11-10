@@ -6,14 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Ticket - ClinicFlow</title>
 
-  <link rel="stylesheet" href="/patient/patient.css">
   <script src="/patient/patient.js"></script>
   <link rel="stylesheet" href="/patient/ticket.css">
   <script src="/patient/ticket.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+  <header class="site-header cf-panel cf-topbar">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg></span><span id="clinicName">ClinicFlow</span></a>
 
     <nav class="top-nav" aria-label="Patient pages">
       <a href="/patient/home.html">Home</a>
@@ -53,7 +52,10 @@
   <main class="page">
 
     <div class="page-title">
-      <h1>My Ticket</h1>
+      <div>
+        <p class="hi" id="hiName">Hi, User</p>
+        <h1>My Ticket</h1>
+      </div>
       <p class="now" id="updated" aria-live="off">Loading...</p>
     </div>
 
@@ -68,6 +70,7 @@
 
     <div class="layout" id="activeArea" hidden>
 
+      <div class="ticket-column">
       <section class="cf-card cf-card-raised ticket-card" aria-labelledby="numberLabel">
         <div class="ticket-top">
           <p class="muted" id="numberLabel">Your queue number</p>
@@ -84,10 +87,11 @@
           <li data-step="3">Done</li>
         </ol>
 
-        <div class="position-box" id="positionBox">
+        <div class="position-box cf-stat" id="positionBox">
           <p class="position-main" id="positionMain"></p>
           <p id="positionAhead"></p>
           <p class="muted" id="positionWait"></p>
+          <p class="muted" id="positionTravel" hidden></p>
         </div>
 
         <dl class="facts" id="calledFacts" hidden>
@@ -95,11 +99,13 @@
           <div class="fact"><dt>Destination</dt><dd id="destination"></dd></div>
         </dl>
 
-        <div class="actions">
-          <button type="button" class="cf-btn cf-btn-secondary" id="hereButton">I'm here</button>
-          <button type="button" class="cf-btn cf-btn-danger" id="cancelButton">Cancel ticket</button>
-        </div>
       </section>
+
+      <div class="actions">
+        <button type="button" class="cf-btn cf-btn-primary" id="hereButton">I'm here</button>
+        <button type="button" class="cf-btn cf-btn-danger" id="cancelButton">Cancel ticket</button>
+      </div>
+      </div>
 
       <div class="side">
         <section class="cf-card" aria-labelledby="queueHeading">
@@ -114,7 +120,7 @@
         <section class="cf-card" aria-labelledby="alertsHeading">
           <h2 class="card-title" id="alertsHeading">Keep this page open</h2>
           <p class="muted" id="alertsText">Watch your ticket status here. Turn on alerts to get a message on this device when your turn is near.</p>
-          <button type="button" class="cf-btn cf-btn-secondary cf-btn-block" id="alertsButton">Enable alerts</button>
+          <button type="button" class="cf-btn cf-btn-outline cf-btn-block" id="alertsButton">Enable alerts</button>
         </section>
       </div>
     </div>
@@ -144,13 +150,13 @@
       <h2 id="cancelTitle">Cancel this ticket?</h2>
       <p class="muted">You will lose your place in the queue. You can take a new number afterwards, but it goes to the back of the line.</p>
       <div class="dialog-actions">
-        <button type="submit" value="keep" class="cf-btn cf-btn-secondary">Keep my ticket</button>
+        <button type="submit" value="keep" class="cf-btn cf-btn-outline">Keep my ticket</button>
         <button type="submit" value="cancel" class="cf-btn cf-btn-danger" id="confirmCancel">Yes, cancel</button>
       </div>
     </form>
   </dialog>
 
-  <nav class="tab-bar" aria-label="Patient pages">
+  <nav class="tab-bar cf-tabs" aria-label="Patient pages">
     <a href="/patient/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
     <a href="/patient/take-number.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
     <a href="/patient/ticket.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>

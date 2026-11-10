@@ -1,32 +1,34 @@
 //create patient notifications: near alerts, single messages and paused notices
-const { clinicNow, getSettings, ticketLabel } = require("./helpers");
+const { clinicNow, getSettings, ticketLabel, isNear } = require("./helpers");
 
-//send near alerts for one service: "you're next" to the first, "near" to the next few, once each
+//send near alerts for one service, once each: "you're next" to the first, "near" to the next few,
+//and "head to the clinic" to anyone whose estimated wait is no longer than their travel time
 async function checkNearAlerts(db, serviceId) {
   //load the near threshold and today's clinic date
   const settings = await getSettings(db);
   const { date } = clinicNow(settings.time_zone);
 
-  //get today's waiting tickets in queue order, so each one's position shows how many are ahead
+  //get today's waiting tickets in queue order, with travel time and the service's average minutes
   const { rows: waiting } = await db.query(
-    `SELECT t.ticket_id, t.patient_id, t.queue_number, s.prefix
+    `SELECT t.ticket_id, t.patient_id, t.queue_number, t.travel_minutes, s.prefix, s.avg_service_minutes
        FROM tickets t JOIN services s ON s.service_id = t.service_id
       WHERE t.service_id = $1 AND t.queue_date = $2 AND t.status = 'waiting' AND t.is_deleted = FALSE
       ORDER BY t.priority DESC, t.queue_number ASC`,
     [serviceId, date],
   );
 
-  //only the first few waiting tickets, up to the near threshold, get an alert
-  const nearCount = Math.min(waiting.length, settings.near_threshold);
-
-  //go through the near tickets, skipping walk-ins, and send each patient their alert once
-  for (let ahead = 0; ahead < nearCount; ahead++) {
+  //go through the waiting tickets, skipping walk-ins and anyone not near yet, and alert each patient once
+  for (let ahead = 0; ahead < waiting.length; ahead++) {
     const t = waiting[ahead];
     if (!t.patient_id) continue;
-    const message =
-      ahead === 0
-        ? `${ticketLabel(t)} - you're next! Please be ready.`
-        : `${ticketLabel(t)} - your turn is near. ${ahead} ${ahead === 1 ? "person is" : "people are"} ahead of you.`;
+    if (!isNear(ahead, t.avg_service_minutes, t.travel_minutes, settings.near_threshold)) continue;
+    const wait = ahead * t.avg_service_minutes;
+    let message;
+    if (ahead === 0) message = `${ticketLabel(t)} - you're next! Please be ready.`;
+    else if (ahead < settings.near_threshold)
+      message = `${ticketLabel(t)} - your turn is near. ${ahead} ${ahead === 1 ? "person is" : "people are"} ahead of you.`;
+    else
+      message = `${ticketLabel(t)} - time to head to the clinic. About ${wait} min until your turn, and your travel time is ${t.travel_minutes} min.`;
 
     //notify the patient by saving a near alert to notifications, only once per ticket
     await db.query(

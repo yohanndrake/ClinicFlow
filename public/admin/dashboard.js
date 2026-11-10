@@ -76,10 +76,14 @@ document.addEventListener('DOMContentLoaded', function () {
     var patients = data.daily.map(function (d) { return d.patients; });
     var waits = data.daily.map(function (d) { return d.avg_wait_minutes; });
 
-    var text = cssColor('--cf-text-muted');
-    var grid = cssColor('--cf-border');
-    var bar = cssColor('--cf-accent-strong');
-    var line = cssColor('--cf-waiting-fg') || bar;
+    var text = getComputedStyle(byId('ticketsChart')).color;
+    var grid = cfColor('--cf-line');
+    var bar = cfColor('--cf-lavender');
+    var lime = cfColor('--cf-lime');
+    var last = labels.length - 1;
+    var peak = patients.indexOf(Math.max.apply(null, patients));
+    var bars = patients.map(function (v, i) { return i === peak ? lime : bar; });
+    var points = waits.map(function (v, i) { return i === last ? lime : bar; });
 
     var rangeText = data.daily.length + ' days';
     document.querySelectorAll('.chart-range').forEach(function (n) { n.textContent = rangeText; });
@@ -100,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (ticketsChart) ticketsChart.destroy();
     ticketsChart = new Chart(byId('ticketsChart'), {
       type: 'bar',
-      data: { labels: labels, datasets: [{ label: 'Patients', data: patients, backgroundColor: bar, borderRadius: 4, maxBarThickness: 28 }] },
+      data: { labels: labels, datasets: [{ label: 'Patients', data: patients, backgroundColor: bars, borderRadius: 4, maxBarThickness: 28 }] },
       options: options('Patients')
     });
 
@@ -109,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
     waitOptions.scales.y.ticks.precision = 1;
     waitChart = new Chart(byId('waitChart'), {
       type: 'line',
-      data: { labels: labels, datasets: [{ label: 'Average wait (min)', data: waits, borderColor: line, backgroundColor: line, borderWidth: 2, pointRadius: 4, pointBackgroundColor: line, spanGaps: false, tension: 0 }] },
+      data: { labels: labels, datasets: [{ label: 'Average wait (min)', data: waits, borderColor: bar, backgroundColor: bar, borderWidth: 2, pointRadius: 4, pointBackgroundColor: points, pointBorderColor: points, spanGaps: false, tension: 0 }] },
       options: waitOptions
     });
 
@@ -123,6 +127,10 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.appendChild(tr);
     });
   }
+
+  document.addEventListener('cf-theme-change', function () {
+    if (data && window.Chart) drawCharts();
+  });
 
   function load() {
     return getJson('/api/admin/dashboard?range=' + range)

@@ -136,9 +136,12 @@ router.get("/queue", async (req, res, next) => {
     };
     if (!showDeleted) for (const t of all) counts[t.status]++;
 
-    //find the current patient and the next waiting one
+    //find the current patient and the next waiting one. A serving ticket with no staff yet
+    //(set to serving by an admin) shows as current too, so staff can finish it
     const current =
-      all.find((t) => t.status === "serving" && t.staff_id === staffId) || null;
+      all.find((t) => t.status === "serving" && t.staff_id === staffId) ||
+      all.find((t) => t.status === "serving" && t.staff_id === null) ||
+      null;
     if (current && current.called_at) {
       current.arrive_by = new Date(
         new Date(current.called_at).getTime() + settings.grace_minutes * 60000,

@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cell('Hours', formatTime(s.open_time) + ' - ' + formatTime(s.close_time));
     cell('Daily limit', s.daily_limit === null ? '—' : String(s.daily_limit));
     var status = cell('Status', '');
-    status.appendChild(el('span', 'cf-badge ' + (s.is_active ? 'cf-active' : 'cf-inactive'), s.is_active ? 'Active' : 'Inactive'));
+    status.appendChild(el('span', 'cf-badge ' + (s.is_active ? 'cf-open' : 'cf-skipped'), s.is_active ? 'Active' : 'Inactive'));
     cell('Staff count', String(s.staff_count));
 
     var actionsCell = el('td', 'actions-col');

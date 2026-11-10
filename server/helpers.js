@@ -1,5 +1,5 @@
 //helpers.js - small shared tools that many route files use (time, ticket labels,
-// transactions, validation, paging, CSV).
+// transactions, validation, paging).
 
 //crypto makes random passwords, pool is the database connection.
 const crypto = require("crypto");
@@ -23,6 +23,12 @@ async function getSettings(db) {
 //builds the display label for a ticket
 function ticketLabel(t) {
   return `${t.prefix}-${String(t.queue_number).padStart(3, "0")}`;
+}
+
+//a waiting ticket is near when few people are ahead, or when the estimated wait is no longer than the patient's travel time
+function isNear(ahead, avgServiceMinutes, travelMinutes, nearThreshold) {
+  if (ahead < nearThreshold) return true;
+  return travelMinutes != null && ahead * avgServiceMinutes <= travelMinutes;
 }
 
 //checks if a patient can take a service at a given time
@@ -132,36 +138,12 @@ const pagination = (total, { page, pageSize }) => ({
   pages: Math.max(1, Math.ceil(total / pageSize)),
 });
 
-//turns one value into safe text for a csv cell
-function csvCell(v) {
-  if (v === null || v === undefined) return "";
-  let s = v instanceof Date ? v.toISOString() : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-//build the whole csv text
-function toCsv(columns, rows) {
-  const lines = [columns.map((c) => csvCell(c.label)).join(",")];
-  for (const r of rows)
-    lines.push(columns.map((c) => csvCell(c.get(r))).join(","));
-  return lines.join("\r\n") + "\r\n";
-}
-
-//send the csv text to the browser as a downloadable file.
-function sendCsv(res, filename, csv) {
-  res.set({
-    "Content-Type": "text/csv; charset=utf-8",
-    "Content-Disposition": `attachment; filename="${filename}"`,
-  });
-  res.send(csv);
-}
-
 //share everything with the other files.
 module.exports = {
   clinicNow,
   getSettings,
   ticketLabel,
+  isNear,
   unavailableReason,
   WAIT_MINUTES,
   SERVICE_MINUTES,
@@ -178,6 +160,4 @@ module.exports = {
   daysBefore,
   parsePage,
   pagination,
-  toCsv,
-  sendCsv,
 };

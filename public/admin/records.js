@@ -1,4 +1,4 @@
-//admin/records.js - admin records script, search all tickets, details, edit, delete, restore and csv export
+//admin/records.js - admin records script, search all tickets, details, edit, delete and restore
 document.addEventListener('DOMContentLoaded', function () {
   var PAGE_SIZE = 20;
 
@@ -92,12 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var bad = !fromInput.value || !toInput.value || fromInput.value > toInput.value;
     byId('rangeError').textContent = bad ? 'Pick a start date that is not after the end date.' : '';
     byId('rangeError').hidden = !bad;
-    byId('exportLink').classList.toggle('is-disabled', bad);
     return !bad;
-  }
-
-  function updateExportLink() {
-    byId('exportLink').href = '/api/admin/tickets/export?' + filterQuery();
   }
 
   function drawRow(t) {
@@ -120,8 +115,8 @@ document.addEventListener('DOMContentLoaded', function () {
     cell('Service').textContent = t.service_name;
 
     var status = cell('Status');
-    if (t.is_deleted) status.appendChild(el('span', 'cf-badge cf-inactive', 'Deleted'));
-    else status.appendChild(el('span', 'cf-badge cf-' + t.status, STATUS_NAMES[t.status] || capitalize(t.status)));
+    if (t.is_deleted) status.appendChild(el('span', 'cf-badge cf-cancelled', 'Deleted'));
+    else status.appendChild(el('span', 'cf-badge ' + statusClass(t.status), STATUS_NAMES[t.status] || capitalize(t.status)));
 
     cell('Wait time').textContent = minutesText(t.wait_minutes);
     cell('Service time').textContent = minutesText(t.service_minutes);
@@ -134,7 +129,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function loadPage(pageNumber, append) {
-    updateExportLink();
     if (!rangeIsValid()) return Promise.resolve();
 
     var mine = ++requestNumber;
@@ -188,10 +182,6 @@ document.addEventListener('DOMContentLoaded', function () {
     searchTimer = setTimeout(reload, 350);
   });
   byId('filters').addEventListener('submit', function (event) { event.preventDefault(); });
-
-  byId('exportLink').addEventListener('click', function (event) {
-    if (!rangeIsValid()) event.preventDefault();
-  });
 
   loadMore.addEventListener('click', function () { loadPage(page + 1, true); });
   byId('prevButton').addEventListener('click', function () { loadPage(page - 1, false); });

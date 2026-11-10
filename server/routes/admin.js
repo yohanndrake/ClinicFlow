@@ -25,8 +25,6 @@ const {
   daysBefore,
   parsePage,
   pagination,
-  toCsv,
-  sendCsv,
 } = require("../helpers");
 const {
   checkNearAlerts,
@@ -242,29 +240,6 @@ router.get("/reports", async (req, res, next) => {
     const params = await reportParams(req);
     if (params.error) return res.status(400).json({ error: params.error });
     res.json(await buildReport(params));
-  } catch (err) {
-    next(err);
-  }
-});
-
-//download the report's daily numbers as a csv file
-router.get("/reports/export", async (req, res, next) => {
-  try {
-    const params = await reportParams(req);
-    if (params.error) return res.status(400).json({ error: params.error });
-    const report = await buildReport(params);
-    sendCsv(
-      res,
-      `clinicflow-report-${report.from}-to-${report.to}.csv`,
-      toCsv(
-        [
-          { label: "Date", get: (r) => r.date },
-          { label: "Patients", get: (r) => r.patients },
-          { label: "Average wait (minutes)", get: (r) => r.avg_wait_minutes },
-        ],
-        report.daily,
-      ),
-    );
   } catch (err) {
     next(err);
   }
@@ -889,43 +864,6 @@ router.get("/tickets", async (req, res, next) => {
   }
 });
 
-//download the records search as a csv file, up to 5000 rows
-router.get("/tickets/export", async (req, res, next) => {
-  try {
-    const { error, filters } = await recordFilters(req);
-    if (error) return res.status(400).json({ error });
-    const result = await searchTickets(pool, {
-      ...filters,
-      limit: 5000,
-      offset: 0,
-    });
-    sendCsv(
-      res,
-      `clinicflow-tickets-${filters.from}-to-${filters.to}.csv`,
-      toCsv(
-        [
-          { label: "Date", get: (t) => t.queue_date },
-          { label: "Ticket", get: (t) => t.ticket_label },
-          { label: "Service", get: (t) => t.service_name },
-          { label: "Patient", get: (t) => t.display_name },
-          { label: "Status", get: (t) => t.status },
-          { label: "Joined", get: (t) => t.queued_at },
-          { label: "Called", get: (t) => t.called_at },
-          { label: "Completed", get: (t) => t.completed_at },
-          { label: "Wait (minutes)", get: (t) => t.wait_minutes },
-          { label: "Service (minutes)", get: (t) => t.service_minutes },
-          { label: "Staff", get: (t) => t.staff_name },
-          { label: "Reason", get: (t) => t.status_reason },
-          { label: "Deleted", get: (t) => (t.is_deleted ? "yes" : "no") },
-        ],
-        result.tickets,
-      ),
-    );
-  } catch (err) {
-    next(err);
-  }
-});
-
 //one ticket with its history (admins can see any service)
 router.get("/tickets/:id", async (req, res, next) => {
   try {
@@ -985,20 +923,44 @@ router.patch("/tickets/:id", (req, res, next) => {
       String(b.reason || "")
         .trim()
         .slice(0, 100) || null;
+    const changed = status !== t.status;
 
+    //moving a ticket back into the queue (waiting or serving) only works for today's tickets,
+    //and not when the patient already has another active ticket
+    if (changed && ["waiting", "serving"].includes(status)) {
+      const settings = await getSettings(db);
+      const { date } = clinicNow(settings.time_zone);
+      if (t.queue_date !== date)
+        return fail(409, "Only tickets from today can be set to waiting or serving");
+      if (t.patient_id) {
+        const { rows: active } = await db.query(
+          `SELECT ticket_id FROM tickets
+            WHERE patient_id = $1 AND queue_date = $2 AND status IN ('waiting','serving')
+              AND is_deleted = FALSE AND ticket_id <> $3`,
+          [t.patient_id, date, t.ticket_id],
+        );
+        if (active.length)
+          return fail(409, "This patient already has another active ticket");
+      }
+    }
+
+    //a ticket newly set to serving is a fresh call: new called time (so the grace period starts now)
+    //and not arrived yet
+    const newlyServing = changed && status === "serving";
     await db.query(
       `UPDATE tickets SET status = $1, note = $2, priority = $3, walk_in_name = $4,
               status_reason = COALESCE($5, status_reason),
-              called_at = CASE WHEN $1::ticket_status IN ('serving', 'completed')
-                               THEN COALESCE(called_at, NOW()) ELSE called_at END,
+              called_at = CASE WHEN $7 THEN NOW()
+                               WHEN $1::ticket_status = 'completed' THEN COALESCE(called_at, NOW())
+                               ELSE called_at END,
+              arrived_at = CASE WHEN $7 THEN NULL ELSE arrived_at END,
               completed_at = CASE WHEN $1::ticket_status = 'completed'
                                   THEN COALESCE(completed_at, NOW()) ELSE completed_at END
         WHERE ticket_id = $6`,
-      [status, note, priority, name, reason, t.ticket_id],
+      [status, note, priority, name, reason, t.ticket_id, newlyServing],
     );
 
-    //log the admin's change, notify the patient on skip or cancel, then refresh near alerts
-    const changed = status !== t.status;
+    //log the admin's change, notify the patient on skip, cancel or call, then refresh near alerts
     const action =
       changed && ["completed", "skipped", "cancelled"].includes(status)
         ? status
@@ -1010,6 +972,14 @@ router.patch("/tickets/:id", (req, res, next) => {
         t,
         status,
         `${ticketLabel(t)} - your ticket was ${status} by the clinic.`,
+      );
+    }
+    if (newlyServing) {
+      await notifyPatient(
+        db,
+        t,
+        "called",
+        `${ticketLabel(t)} - it's your turn! Please go to the clinic.`,
       );
     }
     await checkNearAlerts(db, t.service_id);

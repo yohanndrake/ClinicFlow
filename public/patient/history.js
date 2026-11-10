@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
     service.textContent = t.service_name;
 
     var statusCell = cell('Status');
-    statusCell.appendChild(el('span', 'cf-badge cf-' + status.css, status.label));
+    statusCell.appendChild(el('span', 'cf-badge ' + statusClass(status.css), status.label));
 
     var wait = cell('Wait');
     wait.textContent = minutesText(t.wait_minutes);

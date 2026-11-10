@@ -6,14 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Take a Number - ClinicFlow</title>
 
-  <link rel="stylesheet" href="/patient/patient.css">
   <script src="/patient/patient.js"></script>
   <link rel="stylesheet" href="/patient/take-number.css">
   <script src="/patient/take-number.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span id="clinicName">ClinicFlow</span></a>
+  <header class="site-header cf-panel cf-topbar">
+    <a class="brand" href="/patient/home.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg></span><span id="clinicName">ClinicFlow</span></a>
 
     <nav class="top-nav" aria-label="Patient pages">
       <a href="/patient/home.html">Home</a>
@@ -100,7 +99,7 @@
         <div class="field">
           <label class="cf-label" for="travel">Travel time (minutes)</label>
           <input class="cf-input" id="travel" type="number" inputmode="numeric" min="0" max="600" step="1" aria-describedby="travelHint travelError">
-          <p class="hint" id="travelHint">Default travel time &middot; editable</p>
+          <p class="hint" id="travelHint">How long it takes you to get to the clinic. We'll tell you when to leave.</p>
           <p class="cf-error" id="travelError" hidden></p>
         </div>
 
@@ -110,17 +109,17 @@
       </form>
     </div>
 
-    <section class="cf-card cf-card-raised issued" id="issued" aria-live="polite" hidden>
+    <section class="cf-card cf-card-raised cf-card-lavender issued" id="issued" aria-live="polite" hidden>
       <h2 class="section-title">Ticket issued</h2>
       <p class="issued-number" id="issuedNumber"></p>
       <p class="issued-service" id="issuedService"></p>
       <p class="issued-strong" id="issuedPosition"></p>
       <p class="muted" id="issuedWait"></p>
-      <a href="/patient/ticket.html" class="cf-btn cf-btn-primary cf-btn-block" id="issuedLink">View my ticket</a>
+      <a href="/patient/ticket.html" class="cf-btn cf-btn-ink cf-btn-block" id="issuedLink">View my ticket</a>
     </section>
   </main>
 
-  <nav class="tab-bar" aria-label="Patient pages">
+  <nav class="tab-bar cf-tabs" aria-label="Patient pages">
     <a href="/patient/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
     <a href="/patient/take-number.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Take a Number</a>
     <a href="/patient/ticket.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M9 9h6M9 13h4"/></svg>My Ticket</a>

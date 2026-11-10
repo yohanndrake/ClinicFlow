@@ -33,6 +33,12 @@ function el(tag, className, text) {
   return node;
 }
 
+function statusClass(status) {
+  if (status === 'serving') return 'cf-called';
+  if (status === 'expired') return 'cf-cancelled';
+  return 'cf-' + status;
+}
+
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
