@@ -1,7 +1,5 @@
 .env
 node_modules/
-
-# claude code and graphify (local tools, not part of the app)
 .claude/
 CLAUDE.md
 DESIGN.md
