@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var siteMenu = document.getElementById('siteMenu');
 
   var fields = {
-    fullName: { input: document.getElementById('fullName'), error: document.getElementById('fullNameError') },
+    firstName: { input: document.getElementById('firstName'), error: document.getElementById('firstNameError') },
+    lastName: { input: document.getElementById('lastName'), error: document.getElementById('lastNameError') },
     email: { input: document.getElementById('email'), error: document.getElementById('emailError') },
     contact: { input: document.getElementById('contact'), error: document.getElementById('contactError') },
     password: { input: document.getElementById('password'), error: document.getElementById('passwordError') },
@@ -96,8 +97,16 @@ document.addEventListener('DOMContentLoaded', function () {
     formAlert.hidden = false;
   }
 
+  //checks a first or last name: at least 2 letters, using letters, spaces, - ' . only
+  function nameProblem(value, emptyMessage) {
+    if (!value) return emptyMessage;
+    if (!/^[\p{L}\s.'-]+$/u.test(value)) return "Use letters, spaces, - ' . only.";
+    if (value.replace(/[^\p{L}]/gu, '').length < 2) return 'Use at least 2 letters.';
+    return '';
+  }
+
   function focusFirstError() {
-    var order = ['fullName', 'email', 'contact', 'password', 'confirm'];
+    var order = ['firstName', 'lastName', 'email', 'contact', 'password', 'confirm'];
     for (var i = 0; i < order.length; i++) {
       if (!fields[order[i]].error.hidden) {
         fields[order[i]].input.focus();
@@ -115,18 +124,22 @@ document.addEventListener('DOMContentLoaded', function () {
     event.preventDefault();
     clearErrors();
 
-    var fullName = fields.fullName.input.value.trim();
+    var firstName = fields.firstName.input.value.trim();
+    var lastName = fields.lastName.input.value.trim();
     var email = fields.email.input.value.trim();
     var contact = fields.contact.input.value.trim();
     var password = fields.password.input.value;
     var confirm = fields.confirm.input.value;
     var valid = true;
 
-    if (!fullName) {
-      showFieldError('fullName', 'Enter your full name.');
+    var firstProblem = nameProblem(firstName, 'Enter your first name.');
+    if (firstProblem) {
+      showFieldError('firstName', firstProblem);
       valid = false;
-    } else if (!/\S\s+\S/.test(fullName)) {
-      showFieldError('fullName', 'Enter your first and last name.');
+    }
+    var lastProblem = nameProblem(lastName, 'Enter your last name.');
+    if (lastProblem) {
+      showFieldError('lastName', lastProblem);
       valid = false;
     }
     if (!email) {
@@ -162,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
     registerButton.disabled = true;
     registerButton.textContent = 'Creating account...';
 
-    var body = { full_name: fullName, email: email, password: password };
+    var body = { full_name: firstName + ' ' + lastName, email: email, password: password };
     if (contact) body.contact_number = contact;
 
     fetch('/api/auth/register', {
@@ -189,6 +202,8 @@ document.addEventListener('DOMContentLoaded', function () {
           showFieldError('contact', result.data.error);
         } else if (result.status === 400 && /email/i.test(result.data.error || '')) {
           showFieldError('email', result.data.error);
+        } else if (result.status === 400 && /name/i.test(result.data.error || '')) {
+          showFieldError('firstName', result.data.error);
         } else {
           showAlert(result.data.error || 'Something went wrong. Please try again.');
         }

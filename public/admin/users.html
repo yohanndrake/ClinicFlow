@@ -104,23 +104,31 @@
 
       <div class="field-row">
         <div class="field">
-          <label class="cf-label" for="uName">Name</label>
-          <input class="cf-input" id="uName" maxlength="100" autocomplete="off">
-          <p class="cf-error" id="uNameError" hidden></p>
+          <label class="cf-label" for="uFirst">First name</label>
+          <input class="cf-input" id="uFirst" maxlength="49" autocomplete="off">
+          <p class="cf-error" id="uFirstError" hidden></p>
         </div>
         <div class="field">
-          <label class="cf-label" for="uEmail">Email</label>
-          <input class="cf-input" id="uEmail" type="email" autocomplete="off">
-          <p class="cf-error" id="uEmailError" hidden></p>
+          <label class="cf-label" for="uLast">Last name</label>
+          <input class="cf-input" id="uLast" maxlength="49" autocomplete="off">
+          <p class="cf-error" id="uLastError" hidden></p>
         </div>
       </div>
 
       <div class="field-row">
         <div class="field">
+          <label class="cf-label" for="uEmail">Email</label>
+          <input class="cf-input" id="uEmail" type="email" autocomplete="off">
+          <p class="cf-error" id="uEmailError" hidden></p>
+        </div>
+        <div class="field">
           <label class="cf-label" for="uContact">Contact</label>
           <input class="cf-input" id="uContact" type="tel" maxlength="20" autocomplete="off">
           <p class="cf-error" id="uContactError" hidden></p>
         </div>
+      </div>
+
+      <div class="field-row">
         <div class="field" id="passwordField">
           <label class="cf-label" for="uPassword">Temporary password</label>
           <input class="cf-input" id="uPassword" type="text" autocomplete="off" aria-describedby="uPasswordHint uPasswordError">

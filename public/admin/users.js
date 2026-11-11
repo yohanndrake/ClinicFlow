@@ -167,10 +167,32 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   byId('toolbar').addEventListener('submit', function (event) { event.preventDefault(); });
 
+  //words that belong to the last name, like "Dela" in Juan Dela Cruz
+  var NAME_PARTICLES = ['de', 'del', 'dela', 'della', 'delos', 'los', 'las', 'la', 'san', 'santa', 'sta.', 'sto.', 'van', 'von', 'da', 'di', 'du'];
+
+  //splits a saved full name into first and last name: the last word, plus any particles before it, is the last name
+  function splitName(full) {
+    var words = String(full || '').trim().split(/\s+/);
+    if (words.length < 2) return { first: words[0] || '', last: '' };
+    var start = words.length - 1;
+    while (start > 1 && NAME_PARTICLES.indexOf(words[start - 1].toLowerCase()) !== -1) start--;
+    return { first: words.slice(0, start).join(' '), last: words.slice(start).join(' ') };
+  }
+
+  //checks a first or last name: at least 2 letters, using letters, spaces, - ' . only
+  function nameProblem(value, emptyMessage) {
+    if (!value) return emptyMessage;
+    if (!/^[\p{L}\s.'-]+$/u.test(value)) return "Use letters, spaces, - ' . only.";
+    if (value.replace(/[^\p{L}]/gu, '').length < 2) return 'Use at least 2 letters.';
+    return '';
+  }
+
   function openForm(user) {
     target = user || null;
     byId('userTitle').textContent = (user ? 'Edit ' : 'Add ') + ROLE_WORDS[role];
-    byId('uName').value = user ? user.full_name : '';
+    var parts = splitName(user ? user.full_name : '');
+    byId('uFirst').value = parts.first;
+    byId('uLast').value = parts.last;
     byId('uEmail').value = user ? user.email : '';
     byId('uContact').value = user && user.contact_number ? user.contact_number : '';
     byId('uPassword').value = '';
@@ -182,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('statusField').hidden = !user;
     byId('staffFields').hidden = role !== 'staff';
     openDialog('userDialog');
-    byId('uName').focus();
+    byId('uFirst').focus();
   }
 
   byId('addUser').addEventListener('click', function () { openForm(null); });
@@ -192,7 +214,9 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('userDialog').querySelectorAll('.alert, .cf-error').forEach(function (node) { node.hidden = true; });
     byId('userDialog').querySelectorAll('.is-error').forEach(function (node) { node.classList.remove('is-error'); });
 
-    var name = byId('uName').value.trim();
+    var first = byId('uFirst').value.trim();
+    var last = byId('uLast').value.trim();
+    var name = first + ' ' + last;
     var email = byId('uEmail').value.trim();
     var contact = byId('uContact').value.trim();
     var password = byId('uPassword').value;
@@ -203,8 +227,10 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!firstBad) firstBad = input;
     }
 
-    if (!name) bad('uName', 'Name is required.');
-    else if (!/\S\s+\S/.test(name)) bad('uName', 'Enter a first and last name.');
+    var firstProblem = nameProblem(first, 'First name is required.');
+    if (firstProblem) bad('uFirst', firstProblem);
+    var lastProblem = nameProblem(last, 'Last name is required.');
+    if (lastProblem) bad('uLast', lastProblem);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad('uEmail', 'Enter a valid email address.');
     if (contact && !/^[0-9\s+()-]+$/.test(contact)) bad('uContact', 'Use digits, spaces, + - ( ) only.');
     if (!target && password && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {

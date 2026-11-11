@@ -88,11 +88,32 @@ document.addEventListener('DOMContentLoaded', function () {
   var toast = document.getElementById('toast');
 
   var fields = {
-    fullName: { input: document.getElementById('fullName'), error: document.getElementById('fullNameError') },
+    firstName: { input: document.getElementById('firstName'), error: document.getElementById('firstNameError') },
+    lastName: { input: document.getElementById('lastName'), error: document.getElementById('lastNameError') },
     contact: { input: document.getElementById('contact'), error: document.getElementById('contactError') }
   };
 
   var roleNames = { patient: 'Patient', staff: 'Staff', admin: 'Admin' };
+
+  //words that belong to the last name, like "Dela" in Juan Dela Cruz
+  var NAME_PARTICLES = ['de', 'del', 'dela', 'della', 'delos', 'los', 'las', 'la', 'san', 'santa', 'sta.', 'sto.', 'van', 'von', 'da', 'di', 'du'];
+
+  //splits a saved full name into first and last name: the last word, plus any particles before it, is the last name
+  function splitName(full) {
+    var words = String(full || '').trim().split(/\s+/);
+    if (words.length < 2) return { first: words[0] || '', last: '' };
+    var start = words.length - 1;
+    while (start > 1 && NAME_PARTICLES.indexOf(words[start - 1].toLowerCase()) !== -1) start--;
+    return { first: words.slice(0, start).join(' '), last: words.slice(start).join(' ') };
+  }
+
+  //checks a first or last name: at least 2 letters, using letters, spaces, - ' . only
+  function nameProblem(value, emptyMessage) {
+    if (!value) return emptyMessage;
+    if (!/^[\p{L}\s.'-]+$/u.test(value)) return "Use letters, spaces, - ' . only.";
+    if (value.replace(/[^\p{L}]/gu, '').length < 2) return 'Use at least 2 letters.';
+    return '';
+  }
   var toastTimer = null;
 
   function showName(name, role) {
@@ -162,13 +183,16 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!data) return;
       var profile = data.profile;
 
-      fields.fullName.input.value = profile.full_name;
+      var parts = splitName(profile.full_name);
+      fields.firstName.input.value = parts.first;
+      fields.lastName.input.value = parts.last;
       fields.contact.input.value = profile.contact_number || '';
       document.getElementById('email').value = profile.email;
       document.getElementById('role').value = roleNames[profile.role] || profile.role;
       showName(profile.full_name, profile.role);
 
-      fields.fullName.input.disabled = false;
+      fields.firstName.input.disabled = false;
+      fields.lastName.input.disabled = false;
       fields.contact.input.disabled = false;
       saveButton.disabled = false;
     })
@@ -183,15 +207,20 @@ document.addEventListener('DOMContentLoaded', function () {
     clearErrors();
     toast.hidden = true;
 
-    var fullName = fields.fullName.input.value.trim();
+    var firstName = fields.firstName.input.value.trim();
+    var lastName = fields.lastName.input.value.trim();
+    var fullName = firstName + ' ' + lastName;
     var contact = fields.contact.input.value.trim();
     var valid = true;
 
-    if (!fullName) {
-      showFieldError('fullName', 'Enter your full name.');
+    var firstProblem = nameProblem(firstName, 'Enter your first name.');
+    if (firstProblem) {
+      showFieldError('firstName', firstProblem);
       valid = false;
-    } else if (!/\S\s+\S/.test(fullName)) {
-      showFieldError('fullName', 'Enter your first and last name.');
+    }
+    var lastProblem = nameProblem(lastName, 'Enter your last name.');
+    if (lastProblem) {
+      showFieldError('lastName', lastProblem);
       valid = false;
     }
     if (contact && !/^[0-9+()\-\s]{1,20}$/.test(contact)) {
@@ -199,7 +228,11 @@ document.addEventListener('DOMContentLoaded', function () {
       valid = false;
     }
     if (!valid) {
-      (fields.fullName.error.hidden ? fields.contact.input : fields.fullName.input).focus();
+      ['firstName', 'lastName', 'contact'].some(function (name) {
+        if (fields[name].error.hidden) return false;
+        fields[name].input.focus();
+        return true;
+      });
       return;
     }
 
@@ -227,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (result.status === 400 && /contact/i.test(result.data.error || '')) {
           showFieldError('contact', result.data.error);
         } else if (result.status === 400 && /name/i.test(result.data.error || '')) {
-          showFieldError('fullName', result.data.error);
+          showFieldError('firstName', result.data.error);
         } else {
           showAlert(result.data.error || 'Something went wrong. Please try again.');
         }
