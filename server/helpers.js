@@ -123,6 +123,10 @@ function randomPassword() {
 //checks if the contact number up to 20 characters are  made of digits, + ( ) - and spaces.
 const isValidContact = (v) => /^[0-9+()\-\s]{0,20}$/.test(v);
 
+//checks if the full name has at least two words (first and last name).
+const NAME_RULE = "Enter your first and last name";
+const isFullName = (v) => /^\S+(\s+\S+)+$/.test(String(v).trim());
+
 //input checks - it turns a value into a valid ID or null, and confirm a YYYY-MM-DD date.
 //the date must be a real calendar day: 2026-02-31 rolls over to March, so it must read back the same
 const toId = (v) =>
@@ -176,6 +180,8 @@ module.exports = {
   isStrongPassword,
   randomPassword,
   isValidContact,
+  NAME_RULE,
+  isFullName,
   toId,
   isDate,
   daysBefore,

@@ -190,6 +190,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!fullName) {
       showFieldError('fullName', 'Enter your full name.');
       valid = false;
+    } else if (!/\S\s+\S/.test(fullName)) {
+      showFieldError('fullName', 'Enter your first and last name.');
+      valid = false;
     }
     if (contact && !/^[0-9+()\-\s]{1,20}$/.test(contact)) {
       showFieldError('contact', 'Use only digits, spaces, + - ( ).');

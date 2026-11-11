@@ -204,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (!name) bad('uName', 'Name is required.');
+    else if (!/\S\s+\S/.test(name)) bad('uName', 'Enter a first and last name.');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad('uEmail', 'Enter a valid email address.');
     if (contact && !/^[0-9\s+()-]+$/.test(contact)) bad('uContact', 'Use digits, spaces, + - ( ) only.');
     if (!target && password && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {

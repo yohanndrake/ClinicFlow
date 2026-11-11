@@ -15,6 +15,8 @@ const {
   PASSWORD_RULE,
   isStrongPassword,
   isValidContact,
+  NAME_RULE,
+  isFullName,
 } = require("../helpers");
 
 const router = express.Router();
@@ -98,6 +100,8 @@ router.post("/register", async (req, res, next) => {
         .status(400)
         .json({ error: "Name, email and password must be text" });
     }
+    if (!isFullName(full_name))
+      return res.status(400).json({ error: NAME_RULE });
     if (!EMAIL_RE.test(email) || email.trim().length > 100)
       return res.status(400).json({ error: "Invalid email" });
     if (!isStrongPassword(password))
@@ -277,6 +281,10 @@ router.patch(
         return res
           .status(400)
           .json({ error: "Full name is required (max 100 characters)" });
+      }
+      //a new name needs a first and last name
+      if (b.full_name !== undefined && !isFullName(fullName)) {
+        return res.status(400).json({ error: NAME_RULE });
       }
       if (contact && !isValidContact(contact)) {
         return res

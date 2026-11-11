@@ -125,6 +125,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!fullName) {
       showFieldError('fullName', 'Enter your full name.');
       valid = false;
+    } else if (!/\S\s+\S/.test(fullName)) {
+      showFieldError('fullName', 'Enter your first and last name.');
+      valid = false;
     }
     if (!email) {
       showFieldError('email', 'Enter your email.');

@@ -22,6 +22,8 @@ const {
   isStrongPassword,
   randomPassword,
   isValidContact,
+  NAME_RULE,
+  isFullName,
   toId,
   isDate,
   daysBefore,
@@ -728,6 +730,8 @@ router.post("/users", (req, res, next) => {
       .json({ error: "role must be patient, staff or admin" });
   if (!fullName)
     return res.status(400).json({ error: "full_name is required" });
+  if (!isFullName(fullName))
+    return res.status(400).json({ error: NAME_RULE });
   if (!EMAIL_RE.test(email) || email.length > 100)
     return res.status(400).json({ error: "Invalid email" });
   if (contact && !isValidContact(contact)) {
@@ -804,6 +808,9 @@ router.patch("/users/:role/:id", (req, res, next) => {
     const status = b.status !== undefined ? b.status : cur.status;
 
     if (!full_name) return fail(400, "full_name cannot be empty");
+    //a new name needs a first and last name; an old one-word name is kept when not changed
+    if (b.full_name !== undefined && !isFullName(full_name))
+      return fail(400, NAME_RULE);
     if (!EMAIL_RE.test(email) || email.length > 100)
       return fail(400, "Invalid email");
     if (contact && !isValidContact(contact))
