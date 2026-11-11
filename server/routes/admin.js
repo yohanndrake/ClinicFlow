@@ -7,6 +7,7 @@ const pool = require("../db");
 const {
   requireRole,
   blockIfMustChangePassword,
+  endSessions,
 } = require("../middleware/auth");
 const {
   clinicNow,
@@ -14,6 +15,7 @@ const {
   ticketLabel,
   inTransaction,
   fail,
+  restoreBlockedReason,
   ROLES,
   emailInUse,
   PASSWORD_RULE,
@@ -433,9 +435,44 @@ router.post("/services", (req, res, next) => {
   });
 });
 
+//cancel today's waiting tickets of a service the admin closed, log each one and notify the patients
+async function cancelWaitingTickets(db, service, date, adminId) {
+  const reason = "Closed for the day";
+  const { rows } = await db.query(
+    `UPDATE tickets SET status = 'cancelled', status_reason = $1
+      WHERE service_id = $2 AND queue_date = $3 AND status = 'waiting' AND is_deleted = FALSE
+      RETURNING ticket_id, patient_id, queue_number`,
+    [reason, service.service_id, date],
+  );
+  for (const t of rows) {
+    await addAdminHistory(db, "cancelled", reason, t.ticket_id, adminId);
+    await notifyPatient(
+      db,
+      t,
+      "cancelled",
+      `${ticketLabel({ ...t, prefix: service.prefix })} - the queue was closed for the day.`,
+    );
+  }
+}
+
+//check if a service still has waiting or serving tickets today, so it is not deactivated under them
+async function hasActiveTickets(db, serviceId, date) {
+  const { rows } = await db.query(
+    `SELECT 1 FROM tickets
+      WHERE service_id = $1 AND queue_date = $2 AND status IN ('waiting','serving')
+        AND is_deleted = FALSE LIMIT 1`,
+    [serviceId, date],
+  );
+  return rows.length > 0;
+}
+
+const ACTIVE_TICKETS_ERROR =
+  "This service still has waiting or serving tickets today. Finish or cancel them first.";
+
 //edit a service with its row locked, update its staff, and notify patients if paused
 router.patch("/services/:id", (req, res, next) => {
   const id = toId(req.params.id);
+  const adminId = req.session.user.id;
   inTransaction(res, next, async (db) => {
     if (!id) return fail(404, "Service not found");
     const { rows } = await db.query(
@@ -480,35 +517,49 @@ router.patch("/services/:id", (req, res, next) => {
       if (staffError) return fail(400, staffError);
     }
 
+    const settings = await getSettings(db);
+    const { date } = clinicNow(settings.time_zone);
+
     // If an admin just paused the service, notify the waiting patients too.
     if (v.queue_status === "paused" && current.queue_status !== "paused") {
-      const settings = await getSettings(db);
-      await notifyPaused(
-        db,
-        { ...v, service_id: id },
-        clinicNow(settings.time_zone).date,
-      );
+      await notifyPaused(db, { ...v, service_id: id }, date);
+    }
+
+    // If an admin just closed the service, cancel today's waiting tickets and notify them, like the staff close.
+    if (v.queue_status === "closed" && current.queue_status !== "closed") {
+      await cancelWaitingTickets(db, { ...v, service_id: id }, date, adminId);
+    }
+
+    // A service cannot be deactivated while it still has waiting or serving tickets today.
+    if (!v.is_active && current.is_active && (await hasActiveTickets(db, id, date))) {
+      return fail(409, ACTIVE_TICKETS_ERROR);
     }
     return { status: 200, body: { ok: true } };
   });
 });
 
 //deactivate a service instead of deleting it, so old tickets keep their service
-router.delete("/services/:id", async (req, res, next) => {
-  try {
-    const id = toId(req.params.id);
-    const result =
-      id &&
-      (await pool.query(
-        "UPDATE services SET is_active = FALSE WHERE service_id = $1",
-        [id],
-      ));
-    if (!result || !result.rowCount)
-      return res.status(404).json({ error: "Service not found" });
-    res.json({ ok: true });
-  } catch (err) {
-    next(err);
-  }
+router.delete("/services/:id", (req, res, next) => {
+  const id = toId(req.params.id);
+  inTransaction(res, next, async (db) => {
+    if (!id) return fail(404, "Service not found");
+    const { rows } = await db.query(
+      "SELECT service_id FROM services WHERE service_id = $1 FOR UPDATE",
+      [id],
+    );
+    if (!rows[0]) return fail(404, "Service not found");
+
+    //refuse while the service still has waiting or serving tickets today
+    const settings = await getSettings(db);
+    const { date } = clinicNow(settings.time_zone);
+    if (await hasActiveTickets(db, id, date)) return fail(409, ACTIVE_TICKETS_ERROR);
+
+    await db.query(
+      "UPDATE services SET is_active = FALSE WHERE service_id = $1",
+      [id],
+    );
+    return { status: 200, body: { ok: true } };
+  });
 });
 
 //assign one staff member to one service with a room name
@@ -677,7 +728,7 @@ router.post("/users", (req, res, next) => {
       .json({ error: "role must be patient, staff or admin" });
   if (!fullName)
     return res.status(400).json({ error: "full_name is required" });
-  if (!EMAIL_RE.test(email))
+  if (!EMAIL_RE.test(email) || email.length > 100)
     return res.status(400).json({ error: "Invalid email" });
   if (contact && !isValidContact(contact)) {
     return res.status(400).json({
@@ -753,7 +804,8 @@ router.patch("/users/:role/:id", (req, res, next) => {
     const status = b.status !== undefined ? b.status : cur.status;
 
     if (!full_name) return fail(400, "full_name cannot be empty");
-    if (!EMAIL_RE.test(email)) return fail(400, "Invalid email");
+    if (!EMAIL_RE.test(email) || email.length > 100)
+      return fail(400, "Invalid email");
     if (contact && !isValidContact(contact))
       return fail(
         400,
@@ -783,6 +835,10 @@ router.patch("/users/:role/:id", (req, res, next) => {
     );
     if (assignment.serviceId)
       await assignStaff(db, id, assignment.serviceId, assignment.label);
+
+    //a deactivated account is logged out everywhere right away
+    if (status === "inactive" && cur.status !== "inactive")
+      await endSessions(req, role, id);
     return { status: 200, body: { ok: true } };
   });
 });
@@ -803,6 +859,9 @@ router.post("/users/:role/:id/reset-password", async (req, res, next) => {
       ));
     if (!result || !result.rowCount)
       return res.status(404).json({ error: "User not found" });
+
+    //log the account out everywhere, so it must sign in with the temporary password
+    await endSessions(req, role, id);
     res.json({ ok: true, temporary_password: password });
   } catch (err) {
     next(err);
@@ -900,7 +959,9 @@ router.patch("/tickets/:id", (req, res, next) => {
   const adminId = req.session.user.id;
   inTransaction(res, next, async (db) => {
     const t = await lockTicket(db, req.params.id);
-    if (!t) return fail(404, "Ticket not found");
+
+    //a deleted ticket cannot be edited until it is restored
+    if (!t || t.is_deleted) return fail(404, "Ticket not found");
     const b = bodyOf(req);
 
     // Use the new values if sent, otherwise keep the old ones, and validate them.
@@ -944,20 +1005,28 @@ router.patch("/tickets/:id", (req, res, next) => {
       }
     }
 
-    //a ticket newly set to serving is a fresh call: new called time (so the grace period starts now)
-    //and not arrived yet
+    //a ticket newly set to serving is a fresh call: new called time (so the grace period starts now).
+    //like the staff call, a walk-in counts as arrived and a patient who pressed "I'm here" stays arrived
     const newlyServing = changed && status === "serving";
+
+    //a ticket put back to waiting starts over: no called time yet
+    const newlyWaiting = changed && status === "waiting";
+
+    //both clear the old staff member and completed time, so any assigned staff member can see and finish it
     await db.query(
       `UPDATE tickets SET status = $1, note = $2, priority = $3, walk_in_name = $4,
               status_reason = COALESCE($5, status_reason),
               called_at = CASE WHEN $7 THEN NOW()
+                               WHEN $8 THEN NULL
                                WHEN $1::ticket_status = 'completed' THEN COALESCE(called_at, NOW())
                                ELSE called_at END,
-              arrived_at = CASE WHEN $7 THEN NULL ELSE arrived_at END,
-              completed_at = CASE WHEN $1::ticket_status = 'completed'
-                                  THEN COALESCE(completed_at, NOW()) ELSE completed_at END
+              arrived_at = CASE WHEN $7 AND patient_id IS NULL THEN NOW() ELSE arrived_at END,
+              staff_id = CASE WHEN $7 OR $8 THEN NULL ELSE staff_id END,
+              completed_at = CASE WHEN $7 OR $8 THEN NULL
+                                  WHEN $1::ticket_status = 'completed' THEN COALESCE(completed_at, NOW())
+                                  ELSE completed_at END
         WHERE ticket_id = $6`,
-      [status, note, priority, name, reason, t.ticket_id, newlyServing],
+      [status, note, priority, name, reason, t.ticket_id, newlyServing, newlyWaiting],
     );
 
     //log the admin's change, notify the patient on skip, cancel or call, then refresh near alerts
@@ -1017,6 +1086,11 @@ router.post("/tickets/:id/restore", (req, res, next) => {
   inTransaction(res, next, async (db) => {
     const t = await lockTicket(db, req.params.id);
     if (!t || !t.is_deleted) return fail(404, "Deleted ticket not found");
+
+    //a waiting or serving ticket only comes back if it is from today and the patient has no other active ticket
+    const blocked = await restoreBlockedReason(db, t);
+    if (blocked) return fail(409, blocked);
+
     await db.query(
       "UPDATE tickets SET is_deleted = FALSE WHERE ticket_id = $1",
       [t.ticket_id],
@@ -1036,6 +1110,18 @@ router.get("/settings", async (req, res, next) => {
   }
 });
 
+//settings limits: the highest values allowed, and the shape of a named time zone
+const MAX_NEAR = 100;
+const MAX_GRACE = 1440;
+const MAX_TRAVEL = 600;
+const ZONE_RE = /^[A-Za-z][A-Za-z0-9_+\-/]*$/;
+
+//read a settings number: an empty or non-number value is not a number, so it is rejected instead of becoming 0
+const settingNumber = (v) =>
+  typeof v === "number" || (typeof v === "string" && v.trim() !== "")
+    ? Number(v)
+    : NaN;
+
 //save clinic settings after checking the name, time zone and numbers
 router.patch("/settings", async (req, res, next) => {
   try {
@@ -1051,38 +1137,45 @@ router.patch("/settings", async (req, res, next) => {
       b.time_zone !== undefined ? String(b.time_zone).trim() : cur.time_zone;
     const near =
       b.near_threshold !== undefined
-        ? Number(b.near_threshold)
+        ? settingNumber(b.near_threshold)
         : cur.near_threshold;
     const grace =
       b.grace_minutes !== undefined
-        ? Number(b.grace_minutes)
+        ? settingNumber(b.grace_minutes)
         : cur.grace_minutes;
     const travel =
       b.default_travel_minutes !== undefined
-        ? Number(b.default_travel_minutes)
+        ? settingNumber(b.default_travel_minutes)
         : cur.default_travel_minutes;
 
     if (!clinic_name)
       return res.status(400).json({ error: "clinic_name cannot be empty" });
+
+    //the time zone must be a named zone like Asia/Manila (not an offset like +08:00) that fits the column
+    const zoneError = {
+      error: "time_zone is not a valid time zone, e.g. Asia/Manila",
+    };
+    if (!ZONE_RE.test(time_zone) || time_zone.length > 50)
+      return res.status(400).json(zoneError);
     try {
       new Intl.DateTimeFormat("en", { timeZone: time_zone });
     } catch {
-      return res.status(400).json({
-        error: "time_zone is not a valid time zone, e.g. Asia/Manila",
-      });
+      return res.status(400).json(zoneError);
     }
 
     //check the numbers are whole and in range, then save the settings and return them
-    if (!Number.isInteger(near) || near < 1)
+    if (!Number.isInteger(near) || near < 1 || near > MAX_NEAR)
       return res
         .status(400)
-        .json({ error: "near_threshold must be 1 or more" });
-    if (!Number.isInteger(grace) || grace < 0)
-      return res.status(400).json({ error: "grace_minutes must be 0 or more" });
-    if (!Number.isInteger(travel) || travel < 0)
+        .json({ error: `near_threshold must be from 1 to ${MAX_NEAR}` });
+    if (!Number.isInteger(grace) || grace < 0 || grace > MAX_GRACE)
       return res
         .status(400)
-        .json({ error: "default_travel_minutes must be 0 or more" });
+        .json({ error: `grace_minutes must be from 0 to ${MAX_GRACE}` });
+    if (!Number.isInteger(travel) || travel < 0 || travel > MAX_TRAVEL)
+      return res.status(400).json({
+        error: `default_travel_minutes must be from 0 to ${MAX_TRAVEL}`,
+      });
 
     await pool.query(
       `UPDATE clinic_settings SET clinic_name = $1, time_zone = $2, near_threshold = $3,

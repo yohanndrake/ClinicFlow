@@ -1,6 +1,6 @@
 //patient/ticket.js - my ticket script, live position, people ahead, estimated wait, called countdown, i'm here and cancel
 document.addEventListener("DOMContentLoaded", function () {
-  var REFRESH_SECONDS = 5;
+  var REFRESH_SECONDS = 10;
 
   var pageAlert = document.getElementById("pageAlert");
   var pageNotice = document.getElementById("pageNotice");

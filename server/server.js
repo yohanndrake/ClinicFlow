@@ -4,24 +4,60 @@
 //express-session remembers who is logged in
 //pool is the database connection
 //expireTickets for expiring old tickets
+//DatabaseStore keeps the login sessions in the database
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
 const pool = require("./db");
 const { expireTickets } = require("./jobs");
+const DatabaseStore = require("./sessionStore");
 
 //creates the app
 const app = express();
 
-//trust the https proxy in front of the app on hosts like Render, so secure cookies work
-app.set("trust proxy", 1);
+//trust the https proxy in front of the app on hosts like Render, so secure cookies work.
+//only when there really is one (Render sets RENDER by itself, other hosts set TRUST_PROXY=1):
+//without a proxy, anyone could fake their IP address with a header and dodge the login lock
+if (process.env.RENDER || process.env.TRUST_PROXY === "1") {
+  app.set("trust proxy", 1);
+}
+
+//security headers on every response:
+//- the pages cannot be shown inside a frame on another site (stops clickjacking)
+//- the browser must not guess file types
+//- pages may only load their own files, plus Chart.js from cdnjs and the Google font
+const CONTENT_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://cdnjs.cloudflare.com",
+  "style-src 'self' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+app.use((req, res, next) => {
+  res.set("X-Frame-Options", "DENY");
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("Referrer-Policy", "same-origin");
+  res.set("Content-Security-Policy", CONTENT_POLICY);
+  next();
+});
 
 //app reads the json
 app.use(express.json());
 
-//login memory, the server stores the logged in user to req.session
+//connects the public folder to the server. It comes before the login memory, so plain files
+//(pages, css, js) are sent without looking up the session in the database
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+//login memory, the server stores the logged in user to req.session.
+//the sessions are kept in the database, so a restart does not log everyone out
+const sessionStore = new DatabaseStore();
 app.use(
   session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -34,9 +70,6 @@ app.use(
     },
   }),
 );
-
-//connects the public folder to the server
-app.use(express.static(path.join(__dirname, "..", "public")));
 
 //checks if connection to the database is working
 app.get("/api/health", async (req, res, next) => {
@@ -70,6 +103,10 @@ app.use((req, res) => {
 
 //catche any errors
 app.use((err, req, res, next) => {
+  //a request body that is not valid JSON is the sender's mistake, so answer 400 instead of 500
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid request body" });
+  }
   console.error(err);
   res.status(500).json({ error: "Server error" });
 });
@@ -80,13 +117,18 @@ app.listen(port, () =>
   console.log(`ClinicFlow running at http://localhost:${port}`),
 );
 
-//expires old tickets every 60 seconds and logs them
+//expires old tickets every 60 seconds and logs them, then clears login sessions that have run out
 async function runExpiry() {
   try {
     const n = await expireTickets();
     if (n) console.log(`Expired ${n} ticket(s)`);
   } catch (err) {
     console.error("Expiry task failed:", err.message);
+  }
+  try {
+    await sessionStore.clearExpired();
+  } catch (err) {
+    console.error("Session clean-up failed:", err.message);
   }
 }
 

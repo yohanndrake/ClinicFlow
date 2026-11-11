@@ -68,6 +68,24 @@ async function inTransaction(res, next, fn) {
 //shortcut for an error result
 const fail = (status, error) => ({ status, body: { error } });
 
+//why a deleted ticket cannot be restored, or null if it can. A ticket that is still waiting or serving
+//goes back into the queue, so it must be from today and the patient must have no other active ticket
+async function restoreBlockedReason(db, t) {
+  if (!["waiting", "serving"].includes(t.status)) return null;
+  const settings = await getSettings(db);
+  const { date } = clinicNow(settings.time_zone);
+  if (t.queue_date !== date)
+    return "Only tickets from today can be restored while waiting or serving";
+  if (!t.patient_id) return null;
+  const { rows: active } = await db.query(
+    `SELECT ticket_id FROM tickets
+      WHERE patient_id = $1 AND queue_date = $2 AND status IN ('waiting','serving')
+        AND is_deleted = FALSE AND ticket_id <> $3`,
+    [t.patient_id, date, t.ticket_id],
+  );
+  return active.length ? "This patient already has another active ticket" : null;
+}
+
 //maps each role to its account table and ID column.
 const ROLES = {
   patient: { table: "patients", idCol: "patient_id" },
@@ -106,12 +124,14 @@ function randomPassword() {
 const isValidContact = (v) => /^[0-9+()\-\s]{0,20}$/.test(v);
 
 //input checks - it turns a value into a valid ID or null, and confirm a YYYY-MM-DD date.
+//the date must be a real calendar day: 2026-02-31 rolls over to March, so it must read back the same
 const toId = (v) =>
   Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null;
 const isDate = (s) =>
   typeof s === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(s) &&
-  !Number.isNaN(Date.parse(s));
+  !Number.isNaN(Date.parse(s)) &&
+  new Date(s).toISOString().slice(0, 10) === s;
 
 //subtract days from a YYYY-MM-DD date, for the 7-day and 30-day dashboard ranges.
 function daysBefore(date, days) {
@@ -149,6 +169,7 @@ module.exports = {
   SERVICE_MINUTES,
   inTransaction,
   fail,
+  restoreBlockedReason,
   ROLES,
   emailInUse,
   PASSWORD_RULE,

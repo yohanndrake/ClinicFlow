@@ -1,15 +1,16 @@
---demo data: 
-INSERT INTO admins (full_name, email, password_hash, contact_number) VALUES
-('System Admin', 'admin@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '1234567890');
+--demo data. Every demo account shares one known password, so each one must change it at first login.
+--do not load this file into a live database: anyone who knows the demo password could log in first.
+INSERT INTO admins (full_name, email, password_hash, contact_number, must_change_password) VALUES
+('System Admin', 'admin@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '1234567890', TRUE);
 
-INSERT INTO staff (full_name, email, password_hash, contact_number) VALUES
-('Dr. Staff One', 'staff1@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '1112223333'),
-('Dr. Staff Two', 'staff2@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '4445556666');
+INSERT INTO staff (full_name, email, password_hash, contact_number, must_change_password) VALUES
+('Dr. Staff One', 'staff1@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '1112223333', TRUE),
+('Dr. Staff Two', 'staff2@clinicflow.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '4445556666', TRUE);
 
-INSERT INTO patients (full_name, email, password_hash, contact_number) VALUES
-('John Doe',   'john@example.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550001111'),
-('Jane Smith', 'jane@example.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550002222'),
-('Bob Wilson', 'bob@example.com',  '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550003333');
+INSERT INTO patients (full_name, email, password_hash, contact_number, must_change_password) VALUES
+('John Doe',   'john@example.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550001111', TRUE),
+('Jane Smith', 'jane@example.com', '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550002222', TRUE),
+('Bob Wilson', 'bob@example.com',  '$2b$10$tHRiey5G1TshSjslsYtLiOdkVjNLbioazY7bd3fvzGu4w6UHKUXDi', '5550003333', TRUE);
 
 INSERT INTO services (service_name, prefix, description, avg_service_minutes, open_time, close_time, daily_limit) VALUES
 ('General Consultation', 'G', 'Standard checkup', 10, '08:00:00', '17:00:00', 50);

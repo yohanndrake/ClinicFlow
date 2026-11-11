@@ -240,6 +240,9 @@ document.addEventListener('DOMContentLoaded', function () {
       return ((t.display_name || '') + ' ' + t.ticket_label).toLowerCase().indexOf(search) !== -1;
     });
 
+    //latest ticket first
+    shown.sort(function (a, b) { return b.queue_number - a.queue_number; });
+
     var rows = byId('queueRows');
     rows.textContent = '';
     shown.forEach(function (t) { rows.appendChild(drawRow(t)); });

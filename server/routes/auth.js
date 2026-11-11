@@ -7,6 +7,7 @@ const pool = require("../db");
 const {
   requireLogin,
   blockIfMustChangePassword,
+  endSessions,
 } = require("../middleware/auth");
 const {
   ROLES,
@@ -21,8 +22,14 @@ const router = express.Router();
 //a simple email pattern: text, an @, text, a dot, text, with no spaces.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-//limit login attempts: lock an IP and email for 15 minutes after 5 wrong passwords
+//limit login attempts: lock an IP and email for 15 minutes after 5 wrong passwords.
+//the email alone is also locked after 20 wrong passwords, in case the attempts come from many IP addresses
 const MAX_FAILED_LOGINS = 5;
+const MAX_FAILED_EMAIL = 20;
+
+//the same counter also limits new accounts (20 per IP address in 15 minutes)
+//and wrong current passwords on the change password page (5 per account)
+const MAX_REGISTRATIONS = 20;
 const LOCK_MS = 15 * 60 * 1000;
 const failedLogins = new Map();
 
@@ -37,8 +44,8 @@ function lockedSeconds(key) {
   return Math.ceil((entry.lockedUntil - Date.now()) / 1000);
 }
 
-//record a failed login, lock after 5 failures, and clear old entries when the map gets large
-function recordFailedLogin(key) {
+//record a failed login, lock after too many failures (5 unless told otherwise), and clear old entries when the map gets large
+function recordFailedLogin(key, max = MAX_FAILED_LOGINS) {
   const now = Date.now();
   if (failedLogins.size > 5000) {
     for (const [k, e] of failedLogins)
@@ -48,7 +55,7 @@ function recordFailedLogin(key) {
   if (!entry || now - entry.since > LOCK_MS)
     entry = { count: 0, since: now, lockedUntil: 0 };
   entry.count += 1;
-  if (entry.count >= MAX_FAILED_LOGINS) entry.lockedUntil = now + LOCK_MS;
+  if (entry.count >= max) entry.lockedUntil = now + LOCK_MS;
   failedLogins.set(key, entry);
 }
 
@@ -59,17 +66,39 @@ const tooManyAttempts = (res, seconds) =>
     retry_after_seconds: seconds,
   });
 
+//start a new session with a new ID before logging someone in, so an ID set before login cannot be reused
+const newSession = (req) =>
+  new Promise((resolve, reject) =>
+    req.session.regenerate((err) => (err ? reject(err) : resolve())),
+  );
+
 //register a patient: validate the form, hash the password, create the account and log them in
 router.post("/register", async (req, res, next) => {
   try {
     //check the registration fields: required values, email shape, password strength and contact number
-    const { full_name, email, password, contact_number } = req.body;
+    //stop when this IP address has already created too many accounts in the last 15 minutes
+    const registerKey = `register|${req.ip}`;
+    const locked = lockedSeconds(registerKey);
+    if (locked) return tooManyAttempts(res, locked);
+
+    const { full_name, email, password, contact_number } = req.body || {};
     if (!full_name || !email || !password) {
       return res
         .status(400)
         .json({ error: "Name, email and password are required" });
     }
-    if (!EMAIL_RE.test(email))
+
+    //name, email and password must be text, and the email must fit the database column (100 characters)
+    if (
+      typeof full_name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Name, email and password must be text" });
+    }
+    if (!EMAIL_RE.test(email) || email.trim().length > 100)
       return res.status(400).json({ error: "Invalid email" });
     if (!isStrongPassword(password))
       return res.status(400).json({ error: PASSWORD_RULE });
@@ -99,7 +128,11 @@ router.post("/register", async (req, res, next) => {
       ],
     );
 
-    //log the new patient in by saving them to the session
+    //count this new account for the IP address
+    recordFailedLogin(registerKey, MAX_REGISTRATIONS);
+
+    //log the new patient in by saving them to a new session
+    await newSession(req);
     req.session.user = {
       id: rows[0].patient_id,
       role: "patient",
@@ -119,17 +152,18 @@ router.post("/register", async (req, res, next) => {
 //check the email and password across all role tables, and start a session if they match
 router.post("/login", async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    //clean the email, then build the lock key from the IP and email
+    //clean the email, then build the lock keys: one for the IP and email, one for the email alone
     const cleanEmail = String(email).trim().toLowerCase();
     const key = `${req.ip}|${cleanEmail}`;
+    const emailKey = `email|${cleanEmail}`;
 
-    //if this IP and email are currently locked, stop here.
-    const locked = lockedSeconds(key);
+    //if this IP and email, or the email alone, are currently locked, stop here.
+    const locked = lockedSeconds(key) || lockedSeconds(emailKey);
     if (locked) return tooManyAttempts(res, locked);
 
     //try each role's table for the email, then check the password and start the session
@@ -154,8 +188,10 @@ router.post("/login", async (req, res, next) => {
           });
       }
 
-      //correct password: clear the failed attempts, save the user to the session, and return them
+      //correct password: clear the failed attempts, save the user to a new session, and return them
       failedLogins.delete(key);
+      failedLogins.delete(emailKey);
+      await newSession(req);
       req.session.user = {
         id: row.id,
         role,
@@ -167,7 +203,8 @@ router.post("/login", async (req, res, next) => {
 
     //count the failed attempt, then reply 401, or 429 if this attempt triggered the lock
     recordFailedLogin(key);
-    const nowLocked = lockedSeconds(key);
+    recordFailedLogin(emailKey, MAX_FAILED_EMAIL);
+    const nowLocked = lockedSeconds(key) || lockedSeconds(emailKey);
     if (nowLocked) return tooManyAttempts(res, nowLocked);
     res.status(401).json({ error: "Invalid email or password" });
   } catch (err) {
@@ -225,7 +262,7 @@ router.patch(
       if (!rows[0]) return res.status(404).json({ error: "Account not found" });
 
       //use the new name and contact number if sent, otherwise keep the current ones
-      const b = req.body;
+      const b = req.body || {};
       const fullName =
         b.full_name !== undefined
           ? String(b.full_name).trim()
@@ -267,7 +304,7 @@ router.patch(
 router.post("/change-password", requireLogin, async (req, res, next) => {
   try {
     //check both passwords are sent, the new one is strong, and it differs from the old one
-    const { current_password, new_password } = req.body;
+    const { current_password, new_password } = req.body || {};
     if (!current_password || !new_password) {
       return res
         .status(400)
@@ -285,6 +322,12 @@ router.post("/change-password", requireLogin, async (req, res, next) => {
 
     const { id, role } = req.session.user;
     const { table, idCol } = ROLES[role];
+
+    //stop when this account already had 5 wrong current passwords in the last 15 minutes
+    const passwordKey = `password|${role}|${id}`;
+    const locked = lockedSeconds(passwordKey);
+    if (locked) return tooManyAttempts(res, locked);
+
     const { rows } = await pool.query(
       `SELECT password_hash FROM ${table} WHERE ${idCol} = $1`,
       [id],
@@ -293,8 +336,13 @@ router.post("/change-password", requireLogin, async (req, res, next) => {
       !rows[0] ||
       !(await bcrypt.compare(String(current_password), rows[0].password_hash))
     ) {
+      //count the wrong attempt, then reply 401, or 429 if this attempt triggered the lock
+      recordFailedLogin(passwordKey);
+      const nowLocked = lockedSeconds(passwordKey);
+      if (nowLocked) return tooManyAttempts(res, nowLocked);
       return res.status(401).json({ error: "Current password is incorrect" });
     }
+    failedLogins.delete(passwordKey);
 
     //hash the new password, save it and clear the forced-change flag
     const hash = await bcrypt.hash(new_password, 10);
@@ -302,6 +350,9 @@ router.post("/change-password", requireLogin, async (req, res, next) => {
       `UPDATE ${table} SET password_hash = $1, must_change_password = FALSE WHERE ${idCol} = $2`,
       [hash, id],
     );
+
+    //log the account out on every other device too
+    await endSessions(req, role, id);
 
     //end the session and clear the cookie, then tell the page it was logged out
     req.session.destroy(() => {

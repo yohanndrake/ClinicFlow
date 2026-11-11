@@ -1,4 +1,5 @@
 --removes all tables and types, so the schema can be re-created from scratch.
+DROP TABLE IF EXISTS sessions        CASCADE;
 DROP TABLE IF EXISTS notifications   CASCADE;
 DROP TABLE IF EXISTS ticket_history  CASCADE;
 DROP TABLE IF EXISTS tickets         CASCADE;
@@ -153,6 +154,16 @@ CREATE TABLE notifications (
 --lookup for notifications
 CREATE INDEX idx_notifications_patient ON notifications (patient_id, is_read);
 
+--login sessions, so people stay logged in when the server restarts
+CREATE TABLE sessions (
+    sid    VARCHAR(255) PRIMARY KEY
+  , sess   JSON         NOT NULL
+  , expire TIMESTAMPTZ  NOT NULL
+);
+
+--for clearing sessions that have run out
+CREATE INDEX idx_sessions_expire ON sessions (expire);
+
 --indexes for foreign keys for faster joins
 CREATE INDEX idx_staff_services_service ON staff_services (service_id);
 CREATE INDEX idx_tickets_staff          ON tickets (staff_id);
@@ -171,3 +182,4 @@ ALTER TABLE staff_services  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tickets         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_history  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions        ENABLE ROW LEVEL SECURITY;

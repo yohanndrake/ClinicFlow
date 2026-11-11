@@ -13,6 +13,7 @@ const {
   ticketLabel,
   inTransaction,
   fail,
+  restoreBlockedReason,
   toId,
   isDate,
   daysBefore,
@@ -276,8 +277,12 @@ router.post("/call-next", (req, res, next) => {
     const ticket = waiting[0];
     if (!ticket) return fail(404, "No one is waiting");
 
+    //a walk-in is already at the clinic, so it counts as arrived when called.
+    //a patient who already pressed "I'm here" stays arrived, so the no-show job does not skip them
     await db.query(
-      "UPDATE tickets SET status = 'serving', called_at = NOW(), arrived_at = NULL, staff_id = $1 WHERE ticket_id = $2",
+      `UPDATE tickets SET status = 'serving', called_at = NOW(), staff_id = $1,
+              arrived_at = CASE WHEN patient_id IS NULL THEN NOW() ELSE arrived_at END
+        WHERE ticket_id = $2`,
       [staffId, ticket.ticket_id],
     );
 
@@ -664,6 +669,11 @@ router.post("/tickets/:id/restore", (req, res, next) => {
   inTransaction(res, next, async (db) => {
     const t = await loadTicket(db, req.params.id, staffId);
     if (!t || !t.is_deleted) return fail(404, "Deleted ticket not found");
+
+    //a waiting or serving ticket only comes back if it is from today and the patient has no other active ticket
+    const blocked = await restoreBlockedReason(db, t);
+    if (blocked) return fail(409, blocked);
+
     await db.query(
       "UPDATE tickets SET is_deleted = FALSE WHERE ticket_id = $1",
       [t.ticket_id],

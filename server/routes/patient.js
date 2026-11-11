@@ -30,27 +30,40 @@ const router = express.Router();
 router.use(requireRole("patient"), blockIfMustChangePassword);
 
 //the standard ticket query: ticket, service, room, wait and service minutes, and expired flag
+//a ticket only counts as expired while it is still skipped, so a recalled ticket is not shown as expired
 const TICKET_SELECT = `
   SELECT t.*, s.service_name, s.prefix, s.avg_service_minutes, ss.counter_label AS room,
          ${WAIT_MINUTES} AS wait_minutes, ${SERVICE_MINUTES} AS service_minutes,
-         EXISTS (SELECT 1 FROM ticket_history h WHERE h.ticket_id = t.ticket_id AND h.action = 'expired') AS expired
+         (t.status = 'skipped' AND EXISTS (SELECT 1 FROM ticket_history h WHERE h.ticket_id = t.ticket_id AND h.action = 'expired')) AS expired
     FROM tickets t
     JOIN services s ON s.service_id = t.service_id
     LEFT JOIN staff_services ss ON ss.staff_id = t.staff_id AND ss.service_id = t.service_id`;
 
 //turn a ticket into what the patient page shows: position, wait, state, arrive-by time and queue summary
 async function describeTicket(db, t, settings) {
-  //count waiting tickets ahead of this one, by priority then queue number
-  let ahead = 0;
-  if (t.status === "waiting") {
-    const { rows } = await db.query(
-      `SELECT COUNT(*) AS n FROM tickets
-        WHERE service_id = $1 AND queue_date = $2 AND status = 'waiting' AND is_deleted = FALSE
-          AND (priority > $3 OR (priority = $3 AND queue_number < $4))`,
-      [t.service_id, t.queue_date, t.priority, t.queue_number],
-    );
-    ahead = rows[0].n;
-  }
+  //one query for everything about the queue: the service, how many are waiting, how many of them
+  //are ahead of this ticket (by priority then queue number), and the number being served now.
+  //the ticket page asks for this every few seconds, so it is one query instead of four
+  const { rows: queue } = await db.query(
+    `SELECT s.queue_status, s.status_note, s.open_time, s.close_time,
+            (SELECT COUNT(*) FROM tickets w
+              WHERE w.service_id = s.service_id AND w.queue_date = $2 AND w.status = 'waiting'
+                AND w.is_deleted = FALSE) AS waiting_count,
+            (SELECT COUNT(*) FROM tickets w
+              WHERE w.service_id = s.service_id AND w.queue_date = $2 AND w.status = 'waiting'
+                AND w.is_deleted = FALSE
+                AND (w.priority > $3 OR (w.priority = $3 AND w.queue_number < $4))) AS ahead,
+            (SELECT x.queue_number FROM tickets x
+              WHERE x.service_id = s.service_id AND x.queue_date = $2 AND x.status = 'serving'
+                AND x.is_deleted = FALSE
+              ORDER BY x.called_at LIMIT 1) AS serving_number
+       FROM services s WHERE s.service_id = $1`,
+    [t.service_id, t.queue_date, t.priority, t.queue_number],
+  );
+  const s = queue[0];
+
+  //people ahead only matters while the ticket is still waiting
+  const ahead = t.status === "waiting" ? s.ahead : 0;
 
   //the state patients see: near, called or expired, otherwise the ticket's own status
   let state = t.status;
@@ -61,24 +74,6 @@ async function describeTicket(db, t, settings) {
     state = "near";
   if (t.status === "serving") state = "called";
   if (t.expired) state = "expired";
-
-  //load the service, the ticket being served now, and the waiting count for the queue summary
-  const { rows: svc } = await db.query(
-    "SELECT * FROM services WHERE service_id = $1",
-    [t.service_id],
-  );
-  const { rows: serving } = await db.query(
-    `SELECT queue_number FROM tickets
-      WHERE service_id = $1 AND queue_date = $2 AND status = 'serving' AND is_deleted = FALSE
-      ORDER BY called_at LIMIT 1`,
-    [t.service_id, t.queue_date],
-  );
-  const { rows: waiting } = await db.query(
-    `SELECT COUNT(*) AS n FROM tickets
-      WHERE service_id = $1 AND queue_date = $2 AND status = 'waiting' AND is_deleted = FALSE`,
-    [t.service_id, t.queue_date],
-  );
-  const s = svc[0];
 
   //return the ticket with its position, wait estimate, state, arrive-by time and queue summary
   return {
@@ -103,13 +98,13 @@ async function describeTicket(db, t, settings) {
     queue: {
       queue_status: s.queue_status,
       status_note: s.status_note,
-      now_serving: serving[0]
+      now_serving: s.serving_number
         ? ticketLabel({
             prefix: t.prefix,
-            queue_number: serving[0].queue_number,
+            queue_number: s.serving_number,
           })
         : null,
-      waiting_count: waiting[0].n,
+      waiting_count: s.waiting_count,
       open_time: s.open_time,
       close_time: s.close_time,
     },
@@ -170,12 +165,13 @@ router.get("/services", async (req, res, next) => {
 //take a queue number: validate the input, then check the service and create the ticket in one transaction
 router.post("/tickets", (req, res, next) => {
   //check the service ID, optional travel time and note before taking a number
-  const serviceId = toId(req.body.service_id);
+  const b = req.body || {};
+  const serviceId = toId(b.service_id);
   if (!serviceId)
     return res.status(400).json({ error: "service_id is required" });
   const patientId = req.session.user.id;
 
-  let travel = req.body.travel_minutes;
+  let travel = b.travel_minutes;
   if (travel !== undefined && travel !== null && travel !== "") {
     travel = Number(travel);
     if (!Number.isInteger(travel) || travel < 0 || travel > 600) {
@@ -186,14 +182,19 @@ router.post("/tickets", (req, res, next) => {
   } else {
     travel = null;
   }
-  const note = req.body.note
-    ? String(req.body.note).trim().slice(0, 100)
-    : null;
+  const note = b.note ? String(b.note).trim().slice(0, 100) : null;
 
   //lock the service, check it is open and the patient has no active ticket, then create the ticket
   inTransaction(res, next, async (db) => {
     const settings = await getSettings(db);
     const { date, time } = clinicNow(settings.time_zone);
+
+    //lock the patient's own row first, so two requests sent at the same moment (even for
+    //different services) run one after the other and the second one sees the first ticket
+    await db.query(
+      "SELECT patient_id FROM patients WHERE patient_id = $1 FOR UPDATE",
+      [patientId],
+    );
 
     //lock the service so two patients cannot get the same number, then check it is open
     const { rows: svc } = await db.query(
