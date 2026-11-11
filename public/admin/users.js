@@ -179,6 +179,13 @@ document.addEventListener('DOMContentLoaded', function () {
     return { first: words.slice(0, start).join(' '), last: words.slice(start).join(' ') };
   }
 
+  //capitalizes the first letter of each word (after a space, - or '), leaving the rest as typed
+  function capitalizeName(value) {
+    return value.replace(/(^|[\s'-])(\p{L})/gu, function (match, before, letter) {
+      return before + letter.toUpperCase();
+    });
+  }
+
   //checks a first or last name: at least 2 letters, using letters, spaces, - ' . only
   function nameProblem(value, emptyMessage) {
     if (!value) return emptyMessage;
@@ -214,8 +221,10 @@ document.addEventListener('DOMContentLoaded', function () {
     byId('userDialog').querySelectorAll('.alert, .cf-error').forEach(function (node) { node.hidden = true; });
     byId('userDialog').querySelectorAll('.is-error').forEach(function (node) { node.classList.remove('is-error'); });
 
-    var first = byId('uFirst').value.trim();
-    var last = byId('uLast').value.trim();
+    var first = capitalizeName(byId('uFirst').value.trim());
+    var last = capitalizeName(byId('uLast').value.trim());
+    byId('uFirst').value = first;
+    byId('uLast').value = last;
     var name = first + ' ' + last;
     var email = byId('uEmail').value.trim();
     var contact = byId('uContact').value.trim();
