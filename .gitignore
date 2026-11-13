@@ -4,3 +4,5 @@ node_modules/
 CLAUDE.md
 DESIGN.md
 graphify-out/
+database/seed.sql
+database/database.sql
